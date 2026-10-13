@@ -1,0 +1,12 @@
+Package: lareon-timeofday
+Version: @VERSION@
+Architecture: all
+Maintainer: Lareon <help@lareon.org>
+Depends: python3, tzdata
+Recommends: plasma-workspace
+Section: x11
+Priority: optional
+Homepage: https://lareon.org/
+Description: Lareon wallpaper that follows the sun
+ Shows the Lareon mountains-and-stars scene at dawn, day, dusk or night,
+ worked out offline from the clock and time zone. No location services.

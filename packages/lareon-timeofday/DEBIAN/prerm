@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+if [ "$1" = remove ]; then
+    systemctl --global disable lareon-timeofday.timer >/dev/null 2>&1 || true
+    systemctl disable --now lareon-timeofday-link.timer >/dev/null 2>&1 || true
+    rm -rf /var/lib/lareon/timeofday
+fi
+exit 0

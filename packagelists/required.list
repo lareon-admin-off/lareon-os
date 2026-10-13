@@ -1,0 +1,44 @@
+# Lareon OS: packages the image cannot work without. The build stops if any
+# of these names is missing from Debian 13.
+
+# Desktop (KDE Plasma 6)
+plasma-desktop
+plasma-workspace
+kwin-wayland
+sddm
+plasma-nm
+plasma-pa
+powerdevil
+kscreen
+systemsettings
+kinfocenter
+breeze
+xdg-desktop-portal-kde
+polkit-kde-agent-1
+
+# Everyday apps (re-themed KDE apps rather than custom ones)
+dolphin
+konsole
+gwenview
+okular
+kcalc
+ark
+
+# Apps store
+plasma-discover
+flatpak
+
+# System
+network-manager
+sudo
+locales
+python3
+tzdata
+plymouth
+pipewire-pulse
+wireplumber
+fonts-noto-core
+
+# Installer
+calamares
+calamares-settings-debian

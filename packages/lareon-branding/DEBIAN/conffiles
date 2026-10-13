@@ -1,0 +1,5 @@
+/etc/default/grub.d/lareon.cfg
+/etc/xdg/kdeglobals
+/etc/xdg/plasmarc
+/etc/xdg/kcm-about-distrorc
+/etc/sddm.conf.d/10-lareon.conf

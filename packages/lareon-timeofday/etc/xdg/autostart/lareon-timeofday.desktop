@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Lareon time-of-day wallpaper
+Exec=/usr/bin/lareon-timeofday apply --wait 60
+OnlyShowIn=KDE;
+NoDisplay=true
+X-KDE-autostart-phase=2

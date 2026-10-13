@@ -1,0 +1,15 @@
+#!/bin/sh
+# Point the installer at the Lareon look and rename its launcher.
+set -e
+if [ -f /etc/calamares/settings.conf ]; then
+    sed -i 's/^branding:.*/branding: lareon/' /etc/calamares/settings.conf
+    grep -q '^branding: lareon' /etc/calamares/settings.conf
+fi
+for f in /usr/share/applications/install-debian.desktop /usr/share/applications/calamares.desktop; do
+    [ -f "$f" ] || continue
+    sed -i -e '/^Name\[/d' -e '/^GenericName\[/d' -e '/^Comment\[/d' \
+        -e 's/^Name=.*/Name=Install Lareon OS/' \
+        -e 's/^GenericName=.*/GenericName=Install Lareon OS/' \
+        -e 's/^Comment=.*/Comment=Install Lareon OS on this computer/' \
+        -e 's/^Icon=.*/Icon=lareon/' "$f"
+done

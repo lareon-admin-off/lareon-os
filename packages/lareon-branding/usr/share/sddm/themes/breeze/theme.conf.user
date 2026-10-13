@@ -1,0 +1,4 @@
+[General]
+# Updated every 5 minutes by lareon-timeofday-link.timer
+background=/var/lib/lareon/timeofday/current.png
+type=image

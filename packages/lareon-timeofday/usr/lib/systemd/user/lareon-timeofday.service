@@ -1,0 +1,7 @@
+[Unit]
+Description=Match the Lareon wallpaper to the time of day
+ConditionPathExists=/usr/bin/plasma-apply-wallpaperimage
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/lareon-timeofday apply

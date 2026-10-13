@@ -1,0 +1,6 @@
+#!/bin/sh
+# Add Flathub so Discover can install Flatpak apps out of the box.
+set -e
+if command -v flatpak >/dev/null; then
+    flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+fi

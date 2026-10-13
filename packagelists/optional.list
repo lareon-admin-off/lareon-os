@@ -1,0 +1,37 @@
+# Lareon OS: nice-to-have packages. If a name isn't in Debian 13 the build
+# drops it with a warning instead of failing.
+
+# Desktop extras
+sddm-theme-breeze
+kde-config-sddm
+kwin-x11
+bluedevil
+plasma-systemmonitor
+kde-spectacle
+kwrite
+plasma-discover-backend-flatpak
+kio-extras
+kde-config-gtk-style
+breeze-gtk-theme
+xdg-user-dirs
+plymouth-themes
+pipewire-alsa
+fonts-noto-color-emoji
+fonts-hack
+
+# Hardware support for real machines (Wi-Fi, graphics, sound, CPU fixes)
+firmware-linux-free
+firmware-misc-nonfree
+firmware-amd-graphics
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+firmware-brcm80211
+firmware-intel-sound
+firmware-sof-signed
+intel-microcode
+amd64-microcode
+bluez
+
+# Virtual machines (screen resize and clipboard in virt-manager/GNOME Boxes)
+spice-vdagent

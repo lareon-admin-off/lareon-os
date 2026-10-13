@@ -1,0 +1,374 @@
+#!/usr/bin/python3
+"""lareon-timeofday: keep the Lareon mountains wallpaper in step with the day.
+
+The scene blends through four palettes on the computer's clock:
+
+    night  21:00 - 04:30
+           04:30 - 06:00  night blends into dawn
+    dawn   06:00 - 07:00
+           07:00 - 08:30  dawn blends into day
+    day    08:30 - 16:30
+           16:30 - 18:00  day blends into dusk (stars start to appear)
+    dusk   18:00 - 19:30
+           19:30 - 21:00  dusk blends into night
+
+Each blend is 8 pre-rendered frames (f00..f31.png), so the change is gradual.
+
+Optional: follow_sun=true moves dawn and dusk to the real sunrise and sunset,
+worked out offline from the time zone's city in the system's zone1970.tab (or
+a latitude/longitude you set). No location services, no network.
+
+Commands
+  frame [--at ISO8601]   print the current frame (for testing)
+  table [--date Y-M-D]   print the day's frame changes (for testing)
+  apply [--wait SECS]    set the Plasma desktop + lock screen wallpaper (user)
+  update-link            point /var/lib/lareon/timeofday/current.png at the
+                         current frame (root; used by the sign-in screen)
+  enable | disable       turn the automatic wallpaper on/off for this user
+  status                 show what the tool sees
+
+Per-user settings in ~/.config/lareon/timeofday.conf:
+  enabled=true|false
+  follow_sun=true|false   (default false: use the clock schedule above)
+  latitude=43.6           (optional, with follow_sun; overrides the time zone's city)
+  longitude=-116.2
+"""
+import datetime as dt
+import math
+import os
+import shutil
+import subprocess
+import sys
+import time
+
+WALLDIR = "/usr/share/lareon/wallpapers/timeofday"
+LINKDIR = "/var/lib/lareon/timeofday"
+PALETTES = ["night", "dawn", "day", "dusk"]
+STEPS = 8
+FRAME_COUNT = len(PALETTES) * STEPS
+CONF = os.path.expanduser("~/.config/lareon/timeofday.conf")
+STATE = os.path.expanduser("~/.cache/lareon/timeofday-last")
+APPLETSRC = os.path.expanduser("~/.config/plasma-org.kde.plasma.desktop-appletsrc")
+
+# (minute of day, position in the 32-frame cycle). Between anchors the
+# position moves evenly, which walks through the blend frames.
+MORNING = [(4 * 60 + 30, 0), (6 * 60, 8), (7 * 60, 8), (8 * 60 + 30, 16)]
+EVENING = [(16 * 60 + 30, 16), (18 * 60, 24), (19 * 60 + 30, 24), (21 * 60, 32)]
+DAWN_CENTER = 6 * 60 + 30   # middle of pure dawn, moved to sunrise with follow_sun
+DUSK_CENTER = 18 * 60 + 45  # middle of pure dusk, moved to sunset with follow_sun
+
+
+# ---------------------------------------------------------------- location
+def timezone_name():
+    tz = os.environ.get("TZ", "").lstrip(":")
+    if tz and "/" in tz:
+        return tz
+    try:
+        target = os.path.realpath("/etc/localtime")
+        if "/zoneinfo/" in target:
+            return target.split("/zoneinfo/", 1)[1]
+    except OSError:
+        pass
+    try:
+        with open("/etc/timezone") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+def _dms(s, deg_digits):
+    sign = -1 if s[0] == "-" else 1
+    s = s[1:]
+    d, rest = int(s[:deg_digits]), s[deg_digits:]
+    m = int(rest[:2]) if rest else 0
+    sec = int(rest[2:4]) if len(rest) >= 4 else 0
+    return sign * (d + m / 60 + sec / 3600)
+
+
+def coordinates(tzname):
+    """(lat, lon) for a zone from zone1970.tab / zone.tab, or None."""
+    if not tzname:
+        return None
+    for tab in ("/usr/share/zoneinfo/zone1970.tab", "/usr/share/zoneinfo/zone.tab"):
+        try:
+            with open(tab) as f:
+                for line in f:
+                    if line.startswith("#"):
+                        continue
+                    parts = line.rstrip("\n").split("\t")
+                    if len(parts) >= 3 and parts[2] == tzname:
+                        c = parts[1]
+                        i = max(c.rfind("+"), c.rfind("-"))
+                        lat, lon = c[:i], c[i:]
+                        return _dms(lat, 2), _dms(lon, 3)
+        except OSError:
+            continue
+    return None
+
+
+# ---------------------------------------------------------------- the sun
+def sun(lat, lon, when_utc):
+    """Solar elevation (degrees), whether it is morning, and today's noon
+    elevation. NOAA low-precision formulae; accurate to ~0.5 degree."""
+    doy = when_utc.timetuple().tm_yday
+    mins = when_utc.hour * 60 + when_utc.minute + when_utc.second / 60
+    g = 2 * math.pi / 365 * (doy - 1 + (mins / 60 - 12) / 24)
+    eqtime = 229.18 * (0.000075 + 0.001868 * math.cos(g) - 0.032077 * math.sin(g)
+                       - 0.014615 * math.cos(2 * g) - 0.040849 * math.sin(2 * g))
+    decl = (0.006918 - 0.399912 * math.cos(g) + 0.070257 * math.sin(g)
+            - 0.006758 * math.cos(2 * g) + 0.000907 * math.sin(2 * g)
+            - 0.002697 * math.cos(3 * g) + 0.00148 * math.sin(3 * g))
+    tst = mins + eqtime + 4 * lon
+    ha = tst / 4 - 180
+    ha = (ha + 180) % 360 - 180
+    la = math.radians(lat)
+    cosz = math.sin(la) * math.sin(decl) + math.cos(la) * math.cos(decl) * math.cos(math.radians(ha))
+    elev = 90 - math.degrees(math.acos(max(-1, min(1, cosz))))
+    noon = 90 - abs(lat - math.degrees(decl))
+    return elev, ha < 0, noon
+
+
+def conf_value(key):
+    try:
+        with open(CONF) as f:
+            for line in f:
+                k, _, v = line.partition("=")
+                if k.strip() == key:
+                    return v.strip()
+    except OSError:
+        pass
+    return None
+
+
+def location():
+    """Manual latitude/longitude from the config file, else the time zone's city.
+    Lareon Settings will offer this as "Match my wallpaper to my town"."""
+    lat, lon = conf_value("latitude"), conf_value("longitude")
+    if lat and lon:
+        try:
+            return float(lat), float(lon)
+        except ValueError:
+            pass
+    return coordinates(timezone_name())
+
+
+def sun_times(lat, lon, day, tz):
+    """Local sunrise and sunset (minutes after midnight) or None if the sun
+    doesn't rise or set that day (polar summer/winter)."""
+    rise = set_ = None
+    prev = None
+    for m in range(0, 24 * 60 + 1, 2):
+        t = dt.datetime.combine(day, dt.time(0, 0), tz) + dt.timedelta(minutes=m)
+        e = sun(lat, lon, t.astimezone(dt.timezone.utc))[0]
+        if prev is not None:
+            if prev < -0.83 <= e and rise is None:
+                rise = m
+            if prev >= -0.83 > e:
+                set_ = m
+        prev = e
+    return (rise, set_) if rise is not None and set_ is not None and rise < set_ else None
+
+
+def anchors(when):
+    """The day's schedule, moved to sunrise/sunset if follow_sun is on."""
+    morning, evening, how = MORNING, EVENING, "clock schedule"
+    v = conf_value("follow_sun")
+    if v and v.lower() in ("true", "1", "yes", "on"):
+        loc = location()
+        times = loc and sun_times(loc[0], loc[1], when.date(), when.tzinfo)
+        if times:
+            ms = max(-180, min(180, times[0] - DAWN_CENTER))
+            es = max(-180, min(180, times[1] - DUSK_CENTER))
+            m2 = [(t + ms, p) for t, p in MORNING]
+            e2 = [(t + es, p) for t, p in EVENING]
+            if m2[0][0] >= 0 and e2[-1][0] <= 24 * 60 and m2[-1][0] + 60 <= e2[0][0]:
+                morning, evening = m2, e2
+                how = f"following the sun at {loc[0]:.2f},{loc[1]:.2f} (sunrise {times[0] // 60:02d}:{times[0] % 60:02d}, sunset {times[1] // 60:02d}:{times[1] % 60:02d})"
+            else:
+                how = "clock schedule (days too short or long to follow the sun)"
+        else:
+            how = "clock schedule (no sunrise/sunset here today)"
+    return morning + evening, how
+
+
+def frame_for(when=None):
+    """Return (frame number 0-31, description) for an aware datetime (default: now)."""
+    when = when or dt.datetime.now().astimezone()
+    pts, how = anchors(when)
+    m = when.hour * 60 + when.minute + when.second / 60
+    if m < pts[0][0]:
+        pos = 0
+    elif m >= pts[-1][0]:
+        pos = FRAME_COUNT
+    else:
+        pos = 0
+        for (t0, p0), (t1, p1) in zip(pts, pts[1:]):
+            if t0 <= m < t1:
+                pos = p0 + (p1 - p0) * (m - t0) / (t1 - t0)
+                break
+    return int(pos) % FRAME_COUNT, how
+
+
+def describe(frame):
+    seg, step = divmod(frame, STEPS)
+    if step == 0:
+        return PALETTES[seg]
+    return f"{PALETTES[seg]} -> {PALETTES[(seg + 1) % len(PALETTES)]} {step}/{STEPS}"
+
+
+def image(frame):
+    return os.path.join(WALLDIR, f"f{frame:02d}.png")
+
+
+# ---------------------------------------------------------------- settings
+def enabled():
+    v = conf_value("enabled")
+    return v is None or v.lower() not in ("false", "0", "no", "off")
+
+
+def set_enabled(on):
+    os.makedirs(os.path.dirname(CONF), exist_ok=True)
+    lines = []
+    try:
+        with open(CONF) as f:
+            lines = [l for l in f if l.partition("=")[0].strip() != "enabled"]
+    except OSError:
+        pass
+    lines.append(f"enabled={'true' if on else 'false'}\n")
+    with open(CONF, "w") as f:
+        f.writelines(lines)
+
+
+def user_picked_own_wallpaper():
+    """True if the user has chosen a wallpaper that isn't one of ours.
+
+    Before we have ever applied a frame, Plasma's stock default doesn't count
+    as a choice. After that, any non-Lareon image means the user changed it,
+    and we leave their desktop alone until they run `lareon-timeofday enable`.
+    """
+    if not os.path.exists(STATE):
+        return False
+    try:
+        with open(APPLETSRC) as f:
+            for line in f:
+                if line.startswith("Image="):
+                    val = line.split("=", 1)[1].strip()
+                    if val and WALLDIR not in val:
+                        return True
+    except OSError:
+        pass
+    return False
+
+
+# ---------------------------------------------------------------- actions
+def apply(wait=0):
+    if not enabled():
+        return 0
+    if user_picked_own_wallpaper():
+        return 0
+    frame, _ = frame_for()
+    try:
+        with open(STATE) as f:
+            if f.read().strip() == str(frame) and wait == 0:
+                return 0  # already showing this frame
+    except OSError:
+        pass
+    path = image(frame)
+    if not os.path.exists(path):
+        print(f"missing {path}", file=sys.stderr)
+        return 1
+    tool = shutil.which("plasma-apply-wallpaperimage")
+    if not tool:
+        return 0  # not a Plasma session
+    deadline = time.time() + wait
+    while True:
+        r = subprocess.run([tool, path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if r.returncode == 0:
+            break
+        if time.time() >= deadline:
+            return 0  # plasmashell not running yet; the timer will try again
+        time.sleep(2)
+    kw = shutil.which("kwriteconfig6")
+    if kw:
+        subprocess.run([kw, "--file", "kscreenlockerrc", "--group", "Greeter", "--group", "Wallpaper",
+                        "--group", "org.kde.image", "--group", "General", "--key", "Image",
+                        "file://" + path], check=False)
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    with open(STATE, "w") as f:
+        f.write(f"{frame}\n")
+    return 0
+
+
+def update_link():
+    frame, _ = frame_for()
+    os.makedirs(LINKDIR, exist_ok=True)
+    link = os.path.join(LINKDIR, "current.png")
+    tmp = link + ".new"
+    try:
+        os.unlink(tmp)
+    except FileNotFoundError:
+        pass
+    os.symlink(image(frame), tmp)
+    os.replace(tmp, link)  # atomic: the sign-in screen never sees a missing file
+    return 0
+
+
+def table(day=None):
+    tz = dt.datetime.now().astimezone().tzinfo
+    day = day or dt.date.today()
+    t = dt.datetime.combine(day, dt.time(0, 0), tz)
+    last = None
+    while t.date() == day:
+        f, how = frame_for(t)
+        if f != last:
+            print(f"{t:%H:%M}  f{f:02d}  {describe(f)}")
+            last = f
+        t += dt.timedelta(minutes=1)
+    print(f"({how}; zone {timezone_name()})")
+    return 0
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else "status"
+    args = argv[2:]
+
+    def opt(name, default=None):
+        return args[args.index(name) + 1] if name in args and args.index(name) + 1 < len(args) else default
+
+    if cmd == "frame":
+        at = opt("--at")
+        when = dt.datetime.fromisoformat(at) if at else None
+        if when and when.tzinfo is None:
+            when = when.astimezone()
+        f, how = frame_for(when)
+        print(f"f{f:02d} {describe(f)}" + (f"  ({how})" if "-v" in args else ""))
+        return 0
+    if cmd == "table":
+        d = opt("--date")
+        return table(dt.date.fromisoformat(d) if d else None)
+    if cmd == "apply":
+        return apply(int(opt("--wait", "0")))
+    if cmd == "update-link":
+        return update_link()
+    if cmd in ("enable", "disable"):
+        set_enabled(cmd == "enable")
+        if cmd == "enable":
+            try:
+                os.unlink(STATE)  # forget the user's own pick so we take over again
+            except FileNotFoundError:
+                pass
+            return apply()
+        return 0
+    if cmd == "status":
+        f, how = frame_for()
+        print(f"frame:    f{f:02d} {describe(f)} ({how})")
+        print(f"zone:     {timezone_name()}")
+        print(f"enabled:  {enabled()}")
+        print(f"own pick: {user_picked_own_wallpaper()}")
+        return 0
+    print(__doc__)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

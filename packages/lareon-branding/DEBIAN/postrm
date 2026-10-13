@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+undivert() {
+    rm -f "$1"
+    dpkg-divert --package lareon-branding --remove --rename \
+        --divert "$1.debian" "$1" >/dev/null
+}
+if [ "$1" = remove ] || [ "$1" = purge ]; then
+    undivert /usr/lib/os-release
+    undivert /etc/issue
+    undivert /etc/issue.net
+fi
+exit 0

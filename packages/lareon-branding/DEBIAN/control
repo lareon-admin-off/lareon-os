@@ -1,0 +1,11 @@
+Package: lareon-branding
+Version: @VERSION@
+Architecture: all
+Maintainer: Lareon <help@lareon.org>
+Depends: lareon-timeofday (= @VERSION@)
+Section: misc
+Priority: optional
+Homepage: https://lareon.org/
+Description: Lareon OS identity and default look
+ System name, boot menu name, sign-in screen and desktop defaults
+ for Lareon OS.

@@ -1,0 +1,93 @@
+name: Build Lareon OS
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (leave empty to use the VERSION file)"
+        required: false
+  push:
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  # Fast check on every change: builds the Lareon packages and lints scripts.
+  packages:
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq python3 python3-pil python3-numpy dpkg-dev shellcheck lintian >/dev/null
+      - name: Lint shell scripts
+        run: shellcheck -S warning build.sh live/auto/* live/config/hooks/normal/*.hook.chroot packages/*/DEBIAN/post* packages/*/DEBIAN/pre*
+      - name: Test the time-of-day logic
+        run: python3 tests/test_timeofday.py
+      - name: Build packages
+        run: ./build.sh --packages-only
+      - name: Check packages
+        run: |
+          for d in out/*.deb; do dpkg-deb --info "$d" >/dev/null; lintian --no-tag-display-limit "$d" || true; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lareon-packages
+          path: out/*.deb
+
+  # Full ISO: only when you ask for it (Actions tab -> Run workflow) or push a v* tag.
+  iso:
+    needs: packages
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space on the runner
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune -af >/dev/null
+          df -h /
+
+      - name: Build ISO in a Debian 13 container
+        env:
+          VERSION: ${{ inputs.version || '' }}
+          LAREON_RELEASES_TOKEN: ${{ secrets.LAREON_RELEASES_TOKEN }}
+        run: |
+          V="${VERSION:-$(cat VERSION)}"
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then V="${GITHUB_REF_NAME#v}"; fi
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+          docker run --rm --privileged \
+            -v "$PWD:/src" -w /src \
+            -e VERSION="$V" -e LAREON_RELEASES_TOKEN \
+            debian:trixie bash -euxc '
+              sed -i "s/^Components:.*/Components: main contrib non-free-firmware/" /etc/apt/sources.list.d/debian.sources
+              apt-get update -qq
+              apt-get install -y -qq live-build python3 python3-pil python3-numpy curl ca-certificates \
+                dpkg-dev xz-utils squashfs-tools xorriso grub-efi-amd64-bin grub-pc-bin mtools \
+                dosfstools syslinux syslinux-common isolinux >/dev/null
+              ./build.sh
+            '
+          sudo chown -R "$(id -u):$(id -g)" out
+          ls -la out
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: lareon-os-${{ env.VERSION }}-amd64
+          path: |
+            out/*.iso
+            out/*.sha256
+          compression-level: 0
+          retention-days: 14
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ env.VERSION }}
+          path: |
+            out/*.log
+            work/live/build.log
+          retention-days: 14

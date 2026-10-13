@@ -1,0 +1,12 @@
+PRETTY_NAME="Lareon OS @VERSION@"
+NAME="Lareon OS"
+VERSION_ID="@VERSION@"
+VERSION="@VERSION@"
+VERSION_CODENAME=trixie
+ID=lareon
+ID_LIKE=debian
+LOGO=lareon
+ANSI_COLOR="38;2;255;124;31"
+HOME_URL="https://lareon.org/"
+SUPPORT_URL="https://lareon.org/help"
+BUG_REPORT_URL="https://lareon.org/help"

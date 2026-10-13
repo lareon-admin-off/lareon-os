@@ -1,0 +1,12 @@
+#!/bin/sh
+# Privacy by default: make sure nothing phones home.
+set -e
+# Debian's package-usage survey is opt-in and not installed, but remove it if
+# anything pulled it in.
+apt-get purge -y popularity-contest 2>/dev/null || true
+# KDE's feedback module is off unless the user opts in; pin it off.
+mkdir -p /etc/xdg
+cat > /etc/xdg/PlasmaUserFeedback <<'CONF'
+[Global]
+FeedbackLevel=0
+CONF

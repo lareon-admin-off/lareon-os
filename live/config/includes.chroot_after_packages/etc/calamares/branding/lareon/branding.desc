@@ -1,0 +1,41 @@
+---
+# Lareon OS installer look. Stage 2 replaces the module list and adds the
+# Lareon account, language and theme steps; this file only sets the look.
+componentName:  lareon
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 960px,640px
+windowPlacement: center
+sidebar: widget
+navigation: widget
+
+strings:
+    productName:         "Lareon OS"
+    shortProductName:    "Lareon"
+    version:             "@VERSION@"
+    shortVersion:        "@VERSION@"
+    versionedName:       "Lareon OS @VERSION@"
+    shortVersionedName:  "Lareon @VERSION@"
+    # Must stay "debian": Secure Boot uses Debian's signed shim and GRUB,
+    # which look for their files in /EFI/debian. Renaming breaks booting.
+    bootloaderEntryName: "debian"
+    productUrl:          "https://lareon.org/"
+    supportUrl:          "https://lareon.org/help"
+    releaseNotesUrl:     "https://lareon.org/"
+
+images:
+    productLogo:    "logo.png"
+    productIcon:    "logo.png"
+    productWelcome: "welcome.png"
+
+slideshow:    "show.qml"
+slideshowAPI: 2
+
+style:
+    SidebarBackground:        "#1a1230"
+    SidebarText:              "#e9e3f7"
+    SidebarTextCurrent:       "#ffffff"
+    SidebarBackgroundCurrent: "#ff7c1f"
+
+# No uploadServer: the installer never sends logs anywhere.

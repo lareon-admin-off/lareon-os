@@ -1,0 +1,5 @@
+[General]
+Name=Lareon OS
+LogoPath=/usr/share/pixmaps/lareon-logo.png
+Website=https://lareon.org/
+Variant=@VERSION@

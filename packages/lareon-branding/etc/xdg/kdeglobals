@@ -1,0 +1,11 @@
+# Lareon OS defaults for every user. A user's own settings in
+# ~/.config/kdeglobals always win over this file.
+[General]
+ColorScheme=BreezeDark
+AccentColor=255,124,31
+
+[Icons]
+Theme=breeze-dark
+
+[KDE]
+LookAndFeelPackage=org.kde.breezedark.desktop

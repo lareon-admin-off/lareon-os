@@ -1,0 +1,19 @@
+#!/bin/sh
+# Debian's base-files owns these files and would put "Debian" back on every
+# upgrade. dpkg-divert moves Debian's copies aside permanently, so upgrades
+# write to the .debian names and ours stay in place.
+set -e
+divert() {
+    dpkg-divert --package lareon-branding --add --rename \
+        --divert "$1.debian" "$1" >/dev/null
+    cp "/usr/share/lareon/$2" "$1"
+}
+if [ "$1" = configure ]; then
+    divert /usr/lib/os-release os-release
+    divert /etc/issue issue
+    divert /etc/issue.net issue.net
+    if [ -x /usr/sbin/update-grub ] && [ -e /boot/grub/grub.cfg ]; then
+        update-grub >/dev/null 2>&1 || true
+    fi
+fi
+exit 0

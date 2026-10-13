@@ -1,0 +1,6 @@
+[Unit]
+Description=Point the sign-in screen background at the current time-of-day frame
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/lareon-timeofday update-link

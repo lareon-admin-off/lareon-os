@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the time-of-day wallpaper every 5 minutes
+
+[Timer]
+OnCalendar=*:0/5
+AccuracySec=30s
+# catch up straight away after the laptop wakes from sleep
+Persistent=true
+
+[Install]
+WantedBy=timers.target
