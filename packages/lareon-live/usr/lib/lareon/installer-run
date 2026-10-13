@@ -1,0 +1,22 @@
+#!/bin/sh
+# Run the installer. If it fails, show the Lareon "couldn't be installed"
+# screen; "Try again" runs it again, "Close" ends (exit 2).
+# When installing works, the installer restarts the computer itself.
+LOG=/tmp/lareon-install.log
+while :; do
+    rm -f /tmp/lareon-language
+    sudo -n rm -f /root/.cache/calamares/session.log
+    # The installer runs as root on this Wayland display. QML_XHR_ALLOW_FILE_WRITE
+    # lets the language page save the chosen language for the new system.
+    sudo -n --preserve-env=WAYLAND_DISPLAY,XDG_RUNTIME_DIR,XDG_SESSION_TYPE \
+        env HOME=/root QT_QPA_PLATFORM=wayland QT_QUICK_CONTROLS_STYLE=Basic \
+            QML_XHR_ALLOW_FILE_WRITE=1 calamares
+    code=$?
+    sudo -n cat /root/.cache/calamares/session.log > "$LOG" 2>/dev/null || true
+    if grep -q "Installation failed" "$LOG" 2>/dev/null; then
+        lareon-ui install-failed --set "log=$LOG"
+        [ $? -eq 0 ] && continue
+        exit 2
+    fi
+    exit "$code"
+done

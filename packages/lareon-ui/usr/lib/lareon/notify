@@ -1,0 +1,107 @@
+#!/usr/bin/python3
+"""Lareon system notifications that Plasma doesn't give, in Lareon's words.
+
+- "No internet connection" when Wi-Fi or the network drops (not when the
+  computer goes to sleep or the person turns Wi-Fi off on purpose).
+- "Your drive is almost full" when the home drive runs low, at most once a day.
+
+Battery warnings stay with Plasma's own power manager, so there's only one.
+"""
+import os
+import shutil
+import subprocess
+import threading
+import time
+
+STATE = os.path.expanduser("~/.cache/lareon/notify-last-disk")
+
+
+def nmcli(*args):
+    try:
+        return subprocess.run(["nmcli", "-t", *args], capture_output=True, text=True, timeout=10).stdout
+    except Exception:
+        return ""
+
+
+def notify(app, icon, title, body, actions, on_action, urgency="normal"):
+    """Show a notification; run on_action(key) if a button is pressed."""
+    if not shutil.which("notify-send"):
+        return
+
+    def worker():
+        cmd = ["notify-send", f"--app-name={app}", f"--icon={icon}", f"--urgency={urgency}", "--wait"]
+        for key, label in actions:
+            cmd.append(f"--action={key}={label}")
+        cmd += [title, body]
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True).stdout.strip()
+        except Exception:
+            return
+        if out:
+            on_action(out)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
+def launch(*cmd):
+    try:
+        subprocess.Popen(list(cmd), start_new_session=True)
+    except OSError:
+        pass
+
+
+def wifi_name():
+    for line in nmcli("-f", "NAME,TYPE", "connection", "show", "--active").splitlines():
+        name, _, kind = line.rpartition(":")
+        if kind in ("802-11-wireless", "wifi"):
+            return name
+    return ""
+
+
+def watch_network():
+    was_online = None
+    last_wifi = ""
+    while True:
+        state = nmcli("-f", "STATE,WIFI", "general").strip()
+        net_state, _, wifi_radio = state.partition(":")
+        online = net_state.startswith("connected")
+        if online:
+            last_wifi = wifi_name() or last_wifi
+        elif was_online and net_state == "disconnected" and wifi_radio != "disabled":
+            body = (f"Wi-Fi “{last_wifi}” disconnected. Lareon apps will sync again when you’re back online."
+                    if last_wifi else "Lareon apps will sync again when you’re back online.")
+            notify("Network", "network-wireless-disconnected", "No internet connection", body,
+                   [("settings", "Wi-Fi settings")],
+                   lambda key: launch("systemsettings", "kcm_networkmanagement"))
+        if net_state != "connecting":
+            was_online = online
+        time.sleep(15)
+
+
+def watch_disk():
+    while True:
+        try:
+            st = os.statvfs(os.path.expanduser("~"))
+            free = st.f_bavail * st.f_frsize
+            total = st.f_blocks * st.f_frsize
+            low = free < 2 * 1024**3 or (free < 0.10 * total and free < 20 * 1024**3)
+            last = float(open(STATE).read()) if os.path.exists(STATE) else 0
+            if low and time.time() - last > 24 * 3600:
+                os.makedirs(os.path.dirname(STATE), exist_ok=True)
+                open(STATE, "w").write(str(time.time()))
+                gb = free / 1024**3
+                notify("Storage", "drive-harddisk", "Your drive is almost full",
+                       f"Only {gb:.0f} GB left. Updates may not install until there’s more space."
+                       if gb >= 1 else "Less than 1 GB left. Updates may not install until there’s more space.",
+                       [("files", "Open Files"), ("free", "Free up space")],
+                       lambda key: launch("dolphin", os.path.expanduser("~/Downloads") if key == "free"
+                                          else os.path.expanduser("~")),
+                       urgency="critical" if free < 2 * 1024**3 else "normal")
+        except Exception:
+            pass
+        time.sleep(600)
+
+
+if __name__ == "__main__":
+    threading.Thread(target=watch_disk, daemon=True).start()
+    watch_network()

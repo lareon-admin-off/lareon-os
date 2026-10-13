@@ -1,0 +1,12 @@
+[Unit]
+Description=Lareon network and storage notifications
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/lib/lareon/notify
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=graphical-session.target

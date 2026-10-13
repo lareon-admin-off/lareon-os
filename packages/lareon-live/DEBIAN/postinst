@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+    /usr/lib/lareon/calamares-settings
+    systemctl enable lareon-live-mode.service >/dev/null 2>&1 || true
+    # Hide Debian's own installer launcher; ours is "Install Lareon OS".
+    for f in /usr/share/applications/install-debian.desktop /usr/share/applications/calamares.desktop; do
+        [ -f "$f" ] && sed -i -e '/^NoDisplay=/d' -e '/^\[Desktop Entry\]/a NoDisplay=true' "$f"
+    done
+fi
+exit 0

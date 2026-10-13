@@ -1,0 +1,37 @@
+#!/bin/sh
+# Live USB: choose what the automatic sign-in opens.
+#   live-mode            read lareon.mode= from the boot menu choice (default: try)
+#   live-mode install    full-screen installer only, no desktop
+#   live-mode try        the live desktop
+#   ... --restart        apply now (restarts the sign-in screen)
+set -e
+mode="${1:-}"
+if [ -z "$mode" ] || [ "$mode" = "--restart" ]; then
+    mode=try
+    for arg in $(cat /proc/cmdline); do
+        case "$arg" in lareon.mode=*) mode="${arg#lareon.mode=}" ;; esac
+    done
+fi
+user=lareon
+for arg in $(cat /proc/cmdline); do
+    case "$arg" in username=*|live-config.username=*) user="${arg#*=}" ;; esac
+done
+case "$mode" in
+    install) session=lareon-installer.desktop ;;
+    *)       session=plasma.desktop ;;
+esac
+
+mkdir -p /etc/sddm.conf.d
+cat > /etc/sddm.conf.d/zz-lareon-live.conf <<CONF
+[Autologin]
+User=$user
+Session=$session
+Relogin=true
+CONF
+# /etc/sddm.conf (if live-config wrote one) would win over sddm.conf.d, so
+# take the automatic sign-in settings out of it.
+if [ -f /etc/sddm.conf ]; then
+    sed -i -e '/^User=/d' -e '/^Session=/d' /etc/sddm.conf
+fi
+
+case " $* " in *" --restart "*) systemctl restart display-manager.service ;; esac

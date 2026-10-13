@@ -1,0 +1,369 @@
+#!/usr/bin/python3
+"""Privileged side of Lareon first-start setup.
+
+Runs as root through sudo. Only the temporary `lareon-setup` account may run
+it, and only while /var/lib/lareon/first-start-pending exists (both are set up
+by prepare-first-start and removed by `finish`). Input comes as JSON on stdin
+so passwords never appear in a process list.
+
+  setup-helper wifi-list                  -> JSON {connected, wired, networks:[...]}
+  setup-helper wifi-connect  < {ssid, password}
+  setup-helper apply         < {language, full_name, user_name, password, ...}
+  setup-helper finish
+"""
+import grp
+import json
+import os
+import pwd
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import uuid
+
+PENDING = "/var/lib/lareon/first-start-pending"
+RECORD = "/var/lib/lareon/first-start-user"
+SETUP_USER = "lareon-setup"
+SDDM_SETUP = "/etc/sddm.conf.d/zz-lareon-first-start.conf"
+SDDM_FIRST_LOGIN = "/etc/sddm.conf.d/zz-lareon-first-login.conf"
+SUDOERS = "/etc/sudoers.d/lareon-setup"
+NM_DIR = "/etc/NetworkManager/system-connections"
+
+# Language code (from the installer) -> (LANG, LANGUAGE)
+LOCALES = {
+    "en": ("en_US.UTF-8", "en_US:en"), "es": ("es_ES.UTF-8", "es_ES:es"),
+    "fr": ("fr_FR.UTF-8", "fr_FR:fr"), "de": ("de_DE.UTF-8", "de_DE:de"),
+    "pt": ("pt_PT.UTF-8", "pt_PT:pt"), "it": ("it_IT.UTF-8", "it_IT:it"),
+    "ru": ("ru_RU.UTF-8", "ru_RU:ru"), "tr": ("tr_TR.UTF-8", "tr_TR:tr"),
+    "sv": ("sv_SE.UTF-8", "sv_SE:sv"), "ja": ("ja_JP.UTF-8", "ja_JP:ja"),
+    "ko": ("ko_KR.UTF-8", "ko_KR:ko"), "zh": ("zh_CN.UTF-8", "zh_CN:zh"),
+    "hi": ("hi_IN.UTF-8", "hi_IN:hi"), "ar": ("ar_SA.UTF-8", "ar_SA:ar"),
+    "fa": ("fa_IR.UTF-8", "fa_IR:fa"), "sw": ("sw_TZ.UTF-8", "sw_TZ:sw"),
+    # Darija: glibc has no ary locale, so formats come from Moroccan Arabic and
+    # apps that have Darija translations use them first.
+    "ary": ("ar_MA.UTF-8", "ary:ar_MA:ar"),
+}
+
+
+def fail(msg, code=1):
+    print(msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def run(*cmd, check=True, **kw):
+    r = subprocess.run(list(cmd), capture_output=True, text=True, **kw)
+    if check and r.returncode != 0:
+        fail(f"{cmd[0]} failed: {(r.stderr or r.stdout).strip()}")
+    return r
+
+
+def read_json():
+    try:
+        return json.loads(sys.stdin.read() or "{}")
+    except json.JSONDecodeError:
+        fail("bad input")
+
+
+def write_file(path, text, mode=0o644, owner=None):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path))
+    with os.fdopen(fd, "w") as f:
+        f.write(text)
+    os.chmod(tmp, mode)
+    if owner:
+        os.chown(tmp, owner.pw_uid, owner.pw_gid)
+    os.replace(tmp, path)
+
+
+# --------------------------------------------------------------- Wi-Fi
+def split_terse(line):
+    """Split an `nmcli -t -e yes` line on unescaped colons."""
+    out, cur, esc = [], "", False
+    for ch in line:
+        if esc:
+            cur += ch
+            esc = False
+        elif ch == "\\":
+            esc = True
+        elif ch == ":":
+            out.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    out.append(cur)
+    return out
+
+
+def wifi_list():
+    r = run("nmcli", "-t", "-e", "yes", "-f", "IN-USE,SSID,SIGNAL,SECURITY",
+            "device", "wifi", "list", "--rescan", "yes", check=False)
+    nets, connected = {}, None
+    for line in r.stdout.splitlines():
+        parts = split_terse(line)
+        if len(parts) < 4 or not parts[1]:
+            continue
+        in_use, ssid, signal, security = parts[0], parts[1], parts[2], parts[3]
+        try:
+            signal = int(signal)
+        except ValueError:
+            signal = 0
+        if in_use.strip() == "*":
+            connected = ssid
+        old = nets.get(ssid)
+        if not old or signal > old["signal"]:
+            nets[ssid] = {"ssid": ssid, "signal": signal,
+                          "secure": security.strip() not in ("", "--"), "security": security}
+    wired = False
+    d = run("nmcli", "-t", "-f", "TYPE,STATE", "device", check=False)
+    for line in d.stdout.splitlines():
+        if line.startswith("ethernet:connected"):
+            wired = True
+    networks = sorted(nets.values(), key=lambda n: -n["signal"])
+    print(json.dumps({"connected": connected, "wired": wired, "networks": networks}))
+
+
+def keyfile_escape(value):
+    """Escape a value for NetworkManager's keyfile (GKeyFile) format."""
+    v = value.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r")
+    if v.startswith(" "):
+        v = "\\s" + v[1:]
+    return v
+
+
+def wifi_connect():
+    data = read_json()
+    ssid = str(data.get("ssid", ""))
+    password = str(data.get("password", ""))
+    if not ssid or len(ssid) > 32 or "\n" in ssid:
+        fail("bad network name")
+    # Look up its security type
+    security = ""
+    r = run("nmcli", "-t", "-e", "yes", "-f", "SSID,SECURITY", "device", "wifi", "list", check=False)
+    for line in r.stdout.splitlines():
+        parts = split_terse(line)
+        if len(parts) >= 2 and parts[0] == ssid:
+            security = parts[1]
+            break
+    if "802.1X" in security:
+        fail("This network needs a company login. Connect to it later in Settings.")
+    # Write a NetworkManager keyfile directly (0600, root only) so the password
+    # never appears on a command line.
+    conn_id = ssid
+    lines = ["[connection]", f"id={keyfile_escape(conn_id)}", f"uuid={uuid.uuid4()}", "type=wifi", "",
+             "[wifi]", "mode=infrastructure", f"ssid={keyfile_escape(ssid)}", ""]
+    if security.strip() not in ("", "--"):
+        key_mgmt = "sae" if ("WPA3" in security and "WPA2" not in security) else "wpa-psk"
+        if len(password) < 8 and key_mgmt == "wpa-psk":
+            fail("Wi-Fi passwords are at least 8 characters.")
+        lines += ["[wifi-security]", f"key-mgmt={key_mgmt}", f"psk={keyfile_escape(password)}", ""]
+    lines += ["[ipv4]", "method=auto", "", "[ipv6]", "method=auto", ""]
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", ssid) or "wifi"
+    path = os.path.join(NM_DIR, f"lareon-{safe}.nmconnection")
+    write_file(path, "\n".join(lines), mode=0o600)
+    run("nmcli", "connection", "reload", check=False)
+    up = run("nmcli", "-w", "30", "connection", "up", "id", conn_id, check=False)
+    if up.returncode != 0:
+        os.unlink(path)
+        run("nmcli", "connection", "reload", check=False)
+        fail("Couldn't connect. Check the password.")
+    print("ok")
+
+
+# --------------------------------------------------------------- account
+def human_users():
+    return [p for p in pwd.getpwall() if 1000 <= p.pw_uid < 60000 and p.pw_name != SETUP_USER]
+
+
+def set_locale(code):
+    lang, language = LOCALES.get(code, LOCALES["en"])
+    gen = "/etc/locale.gen"
+    try:
+        text = open(gen).read()
+    except OSError:
+        text = ""
+    entry = f"{lang} UTF-8"
+    if re.search(rf"^\s*{re.escape(entry)}\s*$", text, re.M) is None:
+        new, n = re.subn(rf"^#\s*{re.escape(entry)}\s*$", entry, text, flags=re.M)
+        text = new if n else text + entry + "\n"
+        write_file(gen, text)
+        run("locale-gen", check=False)
+    write_file("/etc/default/locale", f"LANG={lang}\nLANGUAGE={language}\n")
+
+
+def set_hostname(name):
+    write_file("/etc/hostname", name + "\n")
+    try:
+        hosts = open("/etc/hosts").read().splitlines()
+    except OSError:
+        hosts = ["127.0.0.1\tlocalhost"]
+    hosts = [h for h in hosts if not h.startswith("127.0.1.1")]
+    hosts.insert(1, f"127.0.1.1\t{name}")
+    write_file("/etc/hosts", "\n".join(hosts) + "\n")
+    run("hostnamectl", "set-hostname", name, check=False)
+
+
+def set_timezone(zone):
+    if not re.fullmatch(r"[A-Za-z0-9_+/-]+", zone) or ".." in zone \
+            or not os.path.isfile(os.path.join("/usr/share/zoneinfo", zone)):
+        fail("unknown time zone")
+    r = run("timedatectl", "set-timezone", zone, check=False)
+    if r.returncode != 0:
+        if os.path.lexists("/etc/localtime"):
+            os.unlink("/etc/localtime")
+        os.symlink(os.path.join("/usr/share/zoneinfo", zone), "/etc/localtime")
+        write_file("/etc/timezone", zone + "\n")
+
+
+def user_config(user, rel, text):
+    path = os.path.join(user.pw_dir, rel)
+    d = os.path.dirname(path)
+    # create the folders as the user so they own them
+    parts = os.path.relpath(d, user.pw_dir).split(os.sep)
+    cur = user.pw_dir
+    for p in parts:
+        if p in ("", "."):
+            continue
+        cur = os.path.join(cur, p)
+        if not os.path.isdir(cur):
+            os.mkdir(cur, 0o755)
+            os.chown(cur, user.pw_uid, user.pw_gid)
+    write_file(path, text, owner=user)
+
+
+def light_theme(user):
+    try:
+        colors = open("/usr/share/color-schemes/LareonLight.colors").read()
+    except OSError:
+        colors = ""
+    # The colour scheme file's own [General] already names LareonLight.
+    kdeglobals = colors + "\n[KDE]\nLookAndFeelPackage=org.lareon.desktop.light\n\n[Icons]\nTheme=breeze\n"
+    user_config(user, ".config/kdeglobals", kdeglobals)
+    user_config(user, ".config/ksplashrc", "[KSplash]\nEngine=KSplashQML\nTheme=org.lareon.desktop.light\n")
+
+
+def apply():
+    if not os.path.exists(PENDING):
+        fail("setup has already finished")
+    d = read_json()
+    full = str(d.get("full_name", "")).strip()
+    name = str(d.get("user_name", ""))
+    password = str(d.get("password", ""))
+    host = str(d.get("host_name", ""))
+    if not full or len(full) > 100 or any(c in full for c in ":,\n="):
+        fail("Please use a name without : , or =")
+    if not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", name) or name in ("root", SETUP_USER):
+        fail("That username can't be used.")
+    if not re.fullmatch(r"[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?", host):
+        fail("That computer name can't be used.")
+    if len(password) < 6:
+        fail("The password is too short.")
+
+    recorded = open(RECORD).read().strip() if os.path.exists(RECORD) else ""
+    try:
+        user = pwd.getpwnam(name)
+        if recorded != name:
+            fail("That username is already taken.")
+    except KeyError:
+        if human_users():
+            fail("This computer already has an account.")
+        groups = [g for g in ("sudo", "users", "netdev", "lpadmin", "audio", "video", "plugdev", "bluetooth")
+                  if _group_exists(g)]
+        run("useradd", "--create-home", "--user-group", "--shell", "/bin/bash",
+            "--comment", full, "--groups", ",".join(groups), name)
+        user = pwd.getpwnam(name)
+        write_file(RECORD, name + "\n")
+    run("usermod", "--comment", full, name)
+    run("chpasswd", input=f"{name}:{password}\n")
+
+    set_hostname(host)
+    set_timezone(str(d.get("time_zone", "UTC")))
+    set_locale(str(d.get("language", "en")))
+
+    # picture
+    avatar = str(d.get("avatar", ""))
+    if avatar and os.path.isfile(avatar) and os.path.realpath(avatar).startswith("/usr/share/"):
+        os.makedirs("/var/lib/AccountsService/icons", exist_ok=True)
+        shutil.copyfile(avatar, f"/var/lib/AccountsService/icons/{name}")
+        write_file(f"/var/lib/AccountsService/users/{name}", f"[User]\nIcon=/var/lib/AccountsService/icons/{name}\n", mode=0o600)
+        shutil.copyfile(avatar, os.path.join(user.pw_dir, ".face.icon"))
+        os.chown(os.path.join(user.pw_dir, ".face.icon"), user.pw_uid, user.pw_gid)
+
+    # the person's choices
+    tod = "true" if d.get("time_of_day", True) else "false"
+    sun = "true" if d.get("follow_sun", False) else "false"
+    user_config(user, ".config/lareon/timeofday.conf", f"enabled={tod}\nfollow_sun={sun}\n")
+    crash = "never" if d.get("crash_reports") == "never" else "ask"
+    user_config(user, ".config/lareon/privacy.conf", f"crash_reports={crash}\n")
+    if d.get("theme") == "light":
+        light_theme(user)
+
+    email = str(d.get("lareon_email", "")).strip()
+    if email and len(email) < 200 and "\n" not in email:
+        user_config(user, ".config/lareon/account.conf", f"email={email}\n")
+        # finish signing in on lareon.org the first time the desktop opens
+        user_config(user, ".config/autostart/lareon-signin.desktop",
+                    "[Desktop Entry]\nType=Application\nName=Finish signing in to Lareon\n"
+                    "Exec=sh -c 'xdg-open https://lareon.org/ ; rm -f \"$HOME/.config/autostart/lareon-signin.desktop\"'\n"
+                    "NoDisplay=true\nX-KDE-autostart-phase=2\n")
+
+    timers = ["apt-daily.timer", "apt-daily-upgrade.timer"]
+    if d.get("auto_updates", True):
+        run("systemctl", "enable", *timers, check=False)
+    else:
+        run("systemctl", "disable", "--now", *timers, check=False)
+    print("ok")
+
+
+def _group_exists(g):
+    try:
+        grp.getgrnam(g)
+        return True
+    except KeyError:
+        return False
+
+
+def finish():
+    if not os.path.exists(PENDING):
+        fail("setup has already finished")
+    name = open(RECORD).read().strip() if os.path.exists(RECORD) else ""
+    if not name:
+        fail("no account was made")
+    pwd.getpwnam(name)
+    # From now on the sign-in screen is the normal one. This one time, sign the
+    # new account straight in so the desktop opens after "Start using".
+    if os.path.exists(SDDM_SETUP):
+        os.unlink(SDDM_SETUP)
+    write_file(SDDM_FIRST_LOGIN, f"[Autologin]\nUser={name}\nSession=plasma.desktop\nRelogin=false\n")
+    os.unlink(PENDING)
+    run("usermod", "--lock", SETUP_USER, check=False)
+    # The sign-in screen only reads its settings when it starts, so restart it a
+    # moment after this session closes; remove the one-time sign-in shortly after.
+    run("systemd-run", "--on-active=3", "--unit=lareon-first-start-restart",
+        "systemctl", "restart", "display-manager.service", check=False)
+    run("systemd-run", "--on-active=120", "--unit=lareon-first-login-cleanup",
+        "rm", "-f", SDDM_FIRST_LOGIN, check=False)
+    # Last: the setup account can no longer run this helper.
+    if os.path.exists(SUDOERS):
+        os.unlink(SUDOERS)
+    print("ok")
+
+
+def main():
+    if os.geteuid() != 0:
+        fail("must run as root")
+    cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+    if cmd == "wifi-list":
+        wifi_list()
+    elif cmd == "wifi-connect":
+        wifi_connect()
+    elif cmd == "apply":
+        apply()
+    elif cmd == "finish":
+        finish()
+    else:
+        fail("usage: setup-helper wifi-list|wifi-connect|apply|finish", 2)
+
+
+if __name__ == "__main__":
+    main()

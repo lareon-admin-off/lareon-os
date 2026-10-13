@@ -1,0 +1,118 @@
+#!/usr/bin/python3
+"""Show the Lareon "X closed unexpectedly" dialog when one of this user's apps crashes.
+
+systemd-coredump logs every crash to the journal. Lareon OS configures it to
+keep no memory dump (Storage=none), so only the app name, signal and time are
+known. This watcher follows those journal entries for the current user and
+opens `lareon-ui crash` for apps that have a launcher entry (so background
+helpers crashing don't pop up dialogs).
+"""
+import configparser
+import glob
+import json
+import os
+import subprocess
+import time
+
+COREDUMP_MESSAGE_ID = "fc2e22bc6ee647b6b90729ab34a250b1"
+APP_DIRS = ["/usr/share/applications", os.path.expanduser("~/.local/share/applications"),
+            "/var/lib/flatpak/exports/share/applications"]
+ICON_DIRS = ["/usr/share/icons/breeze-dark/apps/48", "/usr/share/icons/breeze/apps/48",
+             "/usr/share/icons/hicolor/scalable/apps", "/usr/share/icons/hicolor/256x256/apps",
+             "/usr/share/icons/hicolor/48x48/apps", "/usr/share/pixmaps"]
+last_shown = {}
+
+
+def os_version():
+    try:
+        for line in open("/etc/os-release"):
+            if line.startswith("VERSION_ID="):
+                return line.split("=", 1)[1].strip().strip('"')
+    except OSError:
+        pass
+    return ""
+
+
+def crash_reports_setting():
+    try:
+        for line in open(os.path.expanduser("~/.config/lareon/privacy.conf")):
+            k, _, v = line.partition("=")
+            if k.strip() == "crash_reports":
+                return v.strip()
+    except OSError:
+        pass
+    return "ask"
+
+
+def find_app(exe):
+    """Return (name, icon path, desktop file) for a program, or None."""
+    base = os.path.basename(exe)
+    for d in APP_DIRS:
+        for path in glob.glob(os.path.join(d, "*.desktop")):
+            cp = configparser.ConfigParser(interpolation=None, strict=False)
+            try:
+                cp.read(path, encoding="utf-8")
+                e = cp["Desktop Entry"]
+            except Exception:
+                continue
+            if e.get("NoDisplay", "false").lower() == "true":
+                continue
+            cmd = (e.get("TryExec") or e.get("Exec", "")).split()
+            if cmd and os.path.basename(cmd[0]) == base:
+                return e.get("Name", base), find_icon(e.get("Icon", "")), path
+    return None
+
+
+def find_icon(name):
+    if not name:
+        return ""
+    if name.startswith("/") and os.path.exists(name):
+        return name
+    for d in ICON_DIRS:
+        for ext in (".svg", ".png"):
+            p = os.path.join(d, name + ext)
+            if os.path.exists(p):
+                return p
+    return ""
+
+
+def handle(entry):
+    if entry.get("COREDUMP_UID") != str(os.getuid()):
+        return
+    exe = entry.get("COREDUMP_EXE", "")
+    if not exe:
+        return
+    app = find_app(exe)
+    if not app:
+        return
+    name, icon, desktop = app
+    now = time.time()
+    if now - last_shown.get(exe, 0) < 60:
+        return  # don't stack dialogs if an app crashes over and over
+    last_shown[exe] = now
+    ts = entry.get("__REALTIME_TIMESTAMP")
+    when = time.strftime("%Y-%m-%d %H:%M", time.localtime(int(ts) / 1e6)) if ts else time.strftime("%Y-%m-%d %H:%M")
+    args = ["lareon-ui", "crash",
+            "--set", f"name={name}", "--set", f"icon={icon}", "--set", f"exe={exe}",
+            "--set", f"launch={desktop}", "--set", f"signal={entry.get('COREDUMP_SIGNAL_NAME', '')}",
+            "--set", f"time={when}", "--set", f"reports={crash_reports_setting()}",
+            "--set", f"version={os_version()}"]
+    subprocess.Popen(args, start_new_session=True)
+
+
+def main():
+    while True:
+        proc = subprocess.Popen(["journalctl", "--follow", "--output=json", "--lines=0",
+                                 f"MESSAGE_ID={COREDUMP_MESSAGE_ID}"],
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        for line in proc.stdout:
+            try:
+                handle(json.loads(line))
+            except Exception:
+                continue
+        proc.wait()
+        time.sleep(10)  # journalctl went away (e.g. journal rotated); start again
+
+
+if __name__ == "__main__":
+    main()

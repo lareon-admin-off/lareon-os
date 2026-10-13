@@ -3,6 +3,7 @@ Version: @VERSION@
 Architecture: all
 Maintainer: Lareon <help@lareon.org>
 Depends: lareon-timeofday (= @VERSION@), fontconfig
+Suggests: os-prober
 Recommends: plymouth, plymouth-label, plasma-workspace
 Section: misc
 Priority: optional

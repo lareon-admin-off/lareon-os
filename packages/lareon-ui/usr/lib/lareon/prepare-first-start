@@ -1,0 +1,36 @@
+#!/bin/sh
+# Run by the installer inside the newly installed system (as root).
+# Makes the first start open Lareon setup, full screen, instead of the desktop.
+set -e
+
+# 1. A temporary account that only runs the setup screen. Locked, no password;
+#    the sign-in screen signs it in automatically.
+if ! id lareon-setup >/dev/null 2>&1; then
+    useradd --system --create-home --home-dir /var/lib/lareon-setup \
+            --shell /bin/sh --comment "Lareon setup" lareon-setup
+fi
+passwd --lock lareon-setup >/dev/null 2>&1 || true
+
+# 2. It may run exactly one program as root: the setup helper.
+cat > /etc/sudoers.d/lareon-setup <<'SUDO'
+# Lareon first-start setup. Removed automatically when setup finishes.
+lareon-setup ALL=(root) NOPASSWD: /usr/lib/lareon/setup-helper
+SUDO
+chmod 0440 /etc/sudoers.d/lareon-setup
+visudo -cf /etc/sudoers.d/lareon-setup >/dev/null
+
+# 3. Sign-in screen: go straight to setup until it's finished. If setup
+#    closes without finishing (a crash, a power cut), it opens again.
+mkdir -p /etc/sddm.conf.d
+cat > /etc/sddm.conf.d/zz-lareon-first-start.conf <<'CONF'
+[Autologin]
+User=lareon-setup
+Session=lareon-first-start.desktop
+Relogin=true
+CONF
+
+mkdir -p /var/lib/lareon
+touch /var/lib/lareon/first-start-pending
+[ -s /var/lib/lareon/language ] || echo en > /var/lib/lareon/language
+
+systemctl enable lareon-first-start-cleanup.service >/dev/null 2>&1 || true

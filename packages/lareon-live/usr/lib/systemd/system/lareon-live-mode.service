@@ -1,0 +1,12 @@
+[Unit]
+Description=Lareon live USB: open the installer or the desktop, as chosen at boot
+ConditionKernelCommandLine=boot=live
+After=live-config.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/lareon/live-mode
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,53 @@
+#!/bin/sh
+# Lareon recovery entries in the boot menu, for the newest kernel:
+#   Start with safe graphics / Check and repair the drive / Recovery terminal
+# Written so it can never break `update-grub`: any problem and it adds nothing.
+set +e
+
+prefix="/usr"
+exec_prefix="/usr"
+datarootdir="/usr/share"
+. "$datarootdir/grub/grub-mkconfig_lib" 2>/dev/null || exit 0
+
+linux=""
+for f in /boot/vmlinuz-*; do
+    [ -f "$f" ] || continue
+    if [ -z "$linux" ] || version_test_gt "$(echo "$f" | sed 's|.*/vmlinuz-||')" "$(echo "$linux" | sed 's|.*/vmlinuz-||')"; then
+        linux="$f"
+    fi
+done
+[ -n "$linux" ] || exit 0
+version=$(basename "$linux" | sed 's/^vmlinuz-//')
+initrd=""
+for i in "/boot/initrd.img-$version"; do [ -f "$i" ] && initrd="$i"; done
+[ -n "$initrd" ] || exit 0
+
+if [ -n "${GRUB_DEVICE_UUID}" ] && [ "${GRUB_DISABLE_LINUX_UUID}" != "true" ]; then
+    root="UUID=${GRUB_DEVICE_UUID}"
+else
+    root="${GRUB_DEVICE}"
+fi
+[ -n "$root" ] || exit 0
+
+boot_device_id=""
+rel_linux=$(make_system_path_relative_to_its_root "$linux") || exit 0
+rel_initrd=$(make_system_path_relative_to_its_root "$initrd") || exit 0
+access=$(prepare_grub_to_access_device "${GRUB_DEVICE_BOOT}" | grub_add_tab) || exit 0
+base="root=$root ro ${GRUB_CMDLINE_LINUX}"
+
+entry() {  # title, extra kernel options
+    cat <<GRUB
+menuentry '$1' --class lareon {
+	load_video
+	insmod gzio
+$access
+	linux	$rel_linux $base $2
+	initrd	$rel_initrd
+}
+GRUB
+}
+
+entry "Start with safe graphics" "quiet splash nomodeset"
+entry "Check and repair the drive" "quiet splash fsck.mode=force fsck.repair=yes"
+entry "Recovery terminal (advanced)" "systemd.unit=rescue.target"
+exit 0

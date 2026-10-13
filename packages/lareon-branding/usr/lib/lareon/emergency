@@ -1,0 +1,70 @@
+#!/bin/sh
+# Lareon start-up problem screen (replaces systemd's emergency prompt).
+#
+# Shows "Lareon OS couldn't start" on the boot screen with four choices:
+#   R  repair the drive and restart (or just restart, if no drive check failed)
+#   O  recovery options (the boot menu is shown at the next start)
+#   S  shut down
+#   T  recovery terminal: systemd's normal emergency shell
+# If the boot screen isn't running, the same choices appear as text.
+# Anything unexpected falls back to the normal emergency shell.
+
+SHELL_CMD="/usr/lib/systemd/systemd-sulogin-shell emergency"
+trap 'exec $SHELL_CMD' INT TERM
+
+# Which filesystems failed their check?
+failed_units=$(systemctl list-units --failed --plain --no-legend 'systemd-fsck@*' 2>/dev/null | awk '{print $1}')
+devices=""
+for u in $failed_units; do
+    inst=${u#systemd-fsck@}; inst=${inst%.service}
+    dev=$(systemd-escape --unescape --path "$inst" 2>/dev/null)
+    [ -n "$dev" ] && devices="$devices $dev"
+done
+
+repair_and_reboot() {
+    [ -n "$PLY" ] && plymouth display-message --text=lareon-repairing
+    for dev in $devices; do
+        fsck -f -y "$dev" >/dev/console 2>&1
+    done
+    systemctl reboot
+}
+
+choose() {  # $1 = key
+    case "$1" in
+        r|R) if [ -n "$devices" ]; then repair_and_reboot; else systemctl reboot; fi ;;
+        o|O) grub-editenv /boot/grub/grubenv set lareon_show_menu=1 2>/dev/null
+             systemctl reboot ;;
+        s|S) systemctl poweroff ;;
+        t|T) [ -n "$PLY" ] && plymouth quit
+             exec $SHELL_CMD ;;
+    esac
+}
+
+if plymouth --ping 2>/dev/null; then
+    PLY=1
+    if [ -n "$devices" ]; then
+        plymouth display-message --text=lareon-error-drive
+    else
+        plymouth display-message --text=lareon-error-generic
+    fi
+    while :; do
+        key=$(plymouth watch-keystroke --keys="rRoOsStT") || exec $SHELL_CMD
+        choose "$key"
+    done
+fi
+
+# Text version (no boot screen)
+PLY=""
+while :; do
+    printf '\n  Lareon OS couldn'"'"'t start.\n\n' >/dev/console
+    if [ -n "$devices" ]; then
+        printf '  A check of your drive found problems it needs to fix first.\n\n' >/dev/console
+        printf '    R  Repair the drive and restart\n' >/dev/console
+    else
+        printf '  Something went wrong while starting.\n\n' >/dev/console
+        printf '    R  Restart\n' >/dev/console
+    fi
+    printf '    O  Recovery options\n    S  Shut down\n    T  Recovery terminal (advanced)\n\n  Choose: ' >/dev/console
+    read -r key </dev/console || exec $SHELL_CMD
+    choose "$key"
+done

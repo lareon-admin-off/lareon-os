@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Install Lareon OS
+GenericName=Install Lareon OS
+Comment=Install Lareon OS on this computer
+Icon=lareon
+Exec=/usr/lib/lareon/installer-run
+Terminal=false
+Categories=System;

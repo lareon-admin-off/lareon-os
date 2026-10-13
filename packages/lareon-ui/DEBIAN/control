@@ -1,0 +1,12 @@
+Package: lareon-ui
+Version: @VERSION@
+Architecture: amd64
+Maintainer: Lareon <help@lareon.org>
+Depends: @SHLIBS@, lareon-branding (= @VERSION@), python3, sudo, network-manager, libnotify-bin, kwin-wayland, sddm, systemd-coredump, qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-window, qml6-module-qtquick-templates, qml6-module-qtqml-workerscript
+Section: x11
+Priority: optional
+Homepage: https://lareon.org/
+Description: Lareon OS screens: first-start setup, install errors, crash dialog
+ The full-screen first-start setup (Wi-Fi, account, Lareon account, look,
+ privacy), the "couldn't be installed" screen, the crash dialog, and
+ Lareon's network and storage notifications.

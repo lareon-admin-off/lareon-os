@@ -1,0 +1,58 @@
+#!/bin/sh
+# Lareon boot menu for the live USB (BIOS and UEFI both use GRUB here).
+# Replaces live-build's menu with: Install Lareon OS (default, starts by itself
+# after 8 seconds), Try Lareon OS without installing, Install with safe
+# graphics, Firmware settings. The theme files are in boot/grub/lareon/
+# (config/includes.binary, made by build.sh).
+set -e
+cfg=boot/grub/grub.cfg
+[ -f "$cfg" ] || { echo "lareon bootmenu: $cfg not found" >&2; exit 1; }
+
+# Reuse the kernel, initrd and options live-build worked out.
+line=$(grep -h -m1 -E '^[[:space:]]*linux[[:space:]]' boot/grub/*.cfg | head -n1)
+kernel=$(echo "$line" | awk '{print $2}')
+options=$(echo "$line" | sed -E 's/^[[:space:]]*linux[[:space:]]+[^[:space:]]+[[:space:]]*//')
+initrd=$(grep -h -m1 -E '^[[:space:]]*initrd[[:space:]]' boot/grub/*.cfg | head -n1 | awk '{print $2}')
+[ -n "$kernel" ] && [ -n "$initrd" ] || { echo "lareon bootmenu: kernel/initrd not found in GRUB config" >&2; exit 1; }
+echo "lareon bootmenu: kernel=$kernel initrd=$initrd options=$options"
+
+fonts=""
+for f in boot/grub/lareon/*.pf2; do [ -f "$f" ] && fonts="$fonts
+loadfont /$f"; done
+
+cat > "$cfg" <<GRUB
+# Lareon OS live USB boot menu (made by 0900-lareon-bootmenu.hook.binary)
+set default=0
+set timeout=8
+set timeout_style=menu
+insmod all_video
+insmod gfxterm
+insmod png
+insmod font
+$fonts
+set gfxmode=auto
+terminal_output gfxterm
+set theme=/boot/grub/lareon/theme.txt
+export theme
+
+menuentry "Install Lareon OS" --class lareon {
+	linux $kernel $options lareon.mode=install
+	initrd $initrd
+}
+menuentry "Try Lareon OS without installing" --class lareon {
+	linux $kernel $options lareon.mode=try
+	initrd $initrd
+}
+menuentry "Install with safe graphics" --class lareon {
+	linux $kernel $options nomodeset lareon.mode=install
+	initrd $initrd
+}
+if [ "\$grub_platform" = "efi" ]; then
+	menuentry "Firmware settings" --class settings {
+		fwsetup
+	}
+fi
+GRUB
+if command -v grub-script-check >/dev/null 2>&1; then
+    grub-script-check "$cfg"
+fi

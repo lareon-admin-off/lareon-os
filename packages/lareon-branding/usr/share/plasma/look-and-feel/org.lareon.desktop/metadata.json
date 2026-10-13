@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [{ "Email": "help@lareon.org", "Name": "Lareon" }],
+        "Description": "The Lareon OS look, dark",
+        "Id": "org.lareon.desktop",
+        "License": "All rights reserved",
+        "Name": "Lareon Dark",
+        "Version": "@VERSION@",
+        "Website": "https://lareon.org/"
+    },
+    "X-Plasma-APIVersion": "2"
+}

@@ -16,6 +16,8 @@ This repository is **stage 1: the proof of concept** (see [ROADMAP.md](ROADMAP.m
 | `artwork/brand/` | The Lareon brand kit: logos, Geist fonts, colours (exact files, never redrawn) |
 | `artwork/make_color_schemes.py` | Turns the brand colours into the Lareon Dark and Light colour schemes |
 | `docs/LANGUAGES.md` | The 17 languages for the installer and first-boot setup (stage 2) |
+| `docs/SETUP-FLOW.md` | The full-screen install and first-start setup, screen by screen, with mockups (stage 2) |
+| `tools/check-clean-checkout.sh` | Builds the packages from a fresh `git clone`, the way GitHub does |
 | `packages/lareon-timeofday/` | The wallpaper switcher (`lareon-timeofday`) and its timers |
 | `packages/lareon-branding/` | System name, boot menu name, sign-in screen, desktop defaults |
 | `live/` | Debian live-build settings for the ISO, installer look, build hooks |
@@ -32,6 +34,8 @@ Everything builds on GitHub Actions; you don't need Linux on your own machine.
    private repos, and one ISO is bigger than that.
 2. Every push runs the fast **packages** job (about 5 minutes): lints the
    scripts, tests the schedule, builds the two Lareon packages.
+   Before uploading a new version, run `tools/check-clean-checkout.sh
+   lareon-os.zip` (on Linux) to check the zip builds from a clean checkout.
 3. To build the ISO: **Actions → Build Lareon OS → Run workflow**, or push a
    tag like `v0.1.0`. It takes 30–60 minutes. The ISO appears under the run's
    **Artifacts** as a zip (kept 14 days). Download it, unzip, and publish it

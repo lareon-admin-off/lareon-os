@@ -1,0 +1,11 @@
+#!/bin/sh
+# The whole first-start "desktop": KWin running only the Lareon setup screen.
+# Keyboard layout follows what was chosen in the installer.
+if [ -r /etc/default/keyboard ]; then
+    . /etc/default/keyboard
+    export XKB_DEFAULT_LAYOUT="${XKBLAYOUT:-}" XKB_DEFAULT_VARIANT="${XKBVARIANT:-}" \
+           XKB_DEFAULT_MODEL="${XKBMODEL:-}" XKB_DEFAULT_OPTIONS="${XKBOPTIONS:-}"
+fi
+export QT_QUICK_CONTROLS_STYLE=Basic
+exec kwin_wayland --locale1 --no-lockscreen --no-global-shortcuts \
+     --exit-with-session="/usr/bin/lareon-ui setup"

@@ -1,0 +1,100 @@
+#!/usr/bin/python3
+"""Turn Debian's installer settings into the Lareon installer.
+
+Runs when the lareon-live package is configured (in the live image build).
+Edits /etc/calamares/settings.conf from calamares-settings-debian so that:
+
+  - the steps are Language -> Keyboard -> Drive -> Install (no user account:
+    the account is made in first-start setup, before the desktop exists);
+  - the Lareon QML pages are used (welcomeq, keyboardq, finishedq);
+  - a Lareon step at the end prepares first-start setup on the new system;
+  - the Lareon branding is used.
+
+Everything else Debian configured (partitioning, boot loader, removing the
+live packages, apt sources) stays exactly as Debian set it up. It refuses to
+continue if the file doesn't look as expected, so a Debian change breaks the
+image build loudly instead of shipping a broken installer.
+"""
+import os
+import sys
+
+import yaml
+
+PATH = "/etc/calamares/settings.conf"
+SHOW_FIRST = ["welcomeq", "keyboardq", "partition"]
+# viewmodules we drop, and job entries that belong to them
+DROP_EXEC = {"users", "locale", "displaymanager"}
+RENAME_EXEC = {"keyboard": "keyboardq"}
+LAREON_STEP = "shellprocess@lareon"
+MODULE_DIRS = ["/usr/lib/x86_64-linux-gnu/calamares/modules", "/usr/lib/calamares/modules"]
+
+
+def die(msg):
+    print(f"lareon calamares-settings: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def module_exists(name):
+    return any(os.path.isfile(os.path.join(d, name, "module.desc")) for d in MODULE_DIRS)
+
+
+def main():
+    for m in ("welcomeq", "keyboardq", "finishedq"):
+        if not module_exists(m):
+            die(f"the Calamares QML module '{m}' is not installed")
+
+    with open(PATH) as f:
+        conf = yaml.safe_load(f)
+    seq = conf.get("sequence")
+    if not isinstance(seq, list) or len(seq) < 3:
+        die("unexpected 'sequence' in settings.conf")
+
+    shows = [s for s in seq if isinstance(s, dict) and "show" in s]
+    execs = [s for s in seq if isinstance(s, dict) and "exec" in s]
+    if len(shows) < 2 or len(execs) < 1:
+        die("settings.conf has no show/exec/show sequence")
+
+    known = {"welcome", "welcomeq", "locale", "localeq", "keyboard", "keyboardq",
+             "partition", "users", "usersq", "summary", "summaryq"}
+    extra = [m for m in shows[0]["show"] if m not in known]
+    if extra:
+        print(f"lareon calamares-settings: note: leaving out Debian pages {extra}", file=sys.stderr)
+    shows[0]["show"] = list(SHOW_FIRST)
+
+    jobs = []
+    for job in execs[0]["exec"]:
+        name = job if isinstance(job, str) else str(job)
+        if name in DROP_EXEC:
+            continue
+        jobs.append(RENAME_EXEC.get(name, name))
+    if "keyboardq" not in jobs:
+        # the keyboard choice must reach the new system (it also sets the
+        # layout used for the disk password at start-up)
+        jobs.insert(jobs.index("localecfg") if "localecfg" in jobs else 0, "keyboardq")
+    if LAREON_STEP not in jobs:
+        if "umount" in jobs:
+            jobs.insert(jobs.index("umount"), LAREON_STEP)
+        else:
+            jobs.append(LAREON_STEP)
+    execs[0]["exec"] = jobs
+
+    shows[-1]["show"] = ["finishedq"]
+
+    inst = conf.get("instances") or []
+    if not any(isinstance(i, dict) and i.get("id") == "lareon" and i.get("module") == "shellprocess" for i in inst):
+        inst.append({"id": "lareon", "module": "shellprocess", "config": "shellprocess-lareon.conf"})
+    conf["instances"] = inst
+
+    conf["branding"] = "lareon"
+
+    with open(PATH, "w") as f:
+        f.write("# Lareon OS installer settings (made from Debian's by /usr/lib/lareon/calamares-settings)\n")
+        yaml.safe_dump(conf, f, sort_keys=False, default_flow_style=False)
+
+    print("lareon calamares-settings: sequence is now:", file=sys.stderr)
+    for step in conf["sequence"]:
+        print(f"  {step}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

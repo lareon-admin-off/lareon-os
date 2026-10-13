@@ -1,0 +1,44 @@
+---
+# Lareon OS installer: full screen, no desktop behind it. The step bar
+# across the top (calamares-sidebar.qml), the Back/Continue bar
+# (calamares-navigation.qml) and the Language, Keyboard and Finish pages
+# (welcomeq.qml, keyboardq.qml, finishedq.qml) are Lareon QML in this folder.
+componentName:  lareon
+welcomeStyleCalamares: false
+welcomeExpandingLogo: true
+windowExpanding: fullscreen
+windowSize: 1200px,760px
+windowPlacement: center
+sidebar: qml,top
+navigation: qml,bottom
+
+strings:
+    productName:         "Lareon OS"
+    shortProductName:    "Lareon"
+    version:             "@VERSION@"
+    shortVersion:        "@VERSION@"
+    versionedName:       "Lareon OS @VERSION@"
+    shortVersionedName:  "Lareon @VERSION@"
+    # Must stay "debian": Secure Boot uses Debian's signed shim and GRUB,
+    # which look for their files in /EFI/debian. Renaming breaks booting.
+    bootloaderEntryName: "debian"
+    productUrl:          "https://lareon.org/"
+    supportUrl:          "https://lareon.org/help"
+    releaseNotesUrl:     "https://lareon.org/"
+
+# Exact files from the Lareon brand kit (copied in by build.sh)
+images:
+    productLogo:    "lareon-icon-256.png"
+    productIcon:    "lareon-icon-256.png"
+    productWelcome: "lareon-icon-512.png"
+
+slideshow:    "show.qml"
+slideshowAPI: 2
+
+style:
+    SidebarBackground:        "#13111b"
+    SidebarText:              "#a7a4ba"
+    SidebarTextCurrent:       "#13111b"
+    SidebarBackgroundCurrent: "#ff7c1f"
+
+# No uploadServer: the installer never sends logs anywhere.

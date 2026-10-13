@@ -1,0 +1,11 @@
+[Unit]
+Description=Tell the boot menu that Lareon OS started properly
+After=multi-user.target
+ConditionPathExists=/boot/grub/grubenv
+
+[Service]
+Type=oneshot
+ExecStart=-/usr/bin/grub-editenv /boot/grub/grubenv unset lareon_booting lareon_show_menu
+
+[Install]
+WantedBy=multi-user.target

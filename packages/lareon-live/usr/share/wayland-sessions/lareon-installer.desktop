@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Install Lareon OS
+Comment=The Lareon OS installer, full screen
+Exec=/usr/lib/lareon/installer-session
+NoDisplay=true
+DesktopNames=Lareon

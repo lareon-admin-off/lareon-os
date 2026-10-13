@@ -1,33 +1,143 @@
-# Lareon OS boot screen: the Lareon mark on the dark Lareon background,
-# gently breathing while the system starts. Also shows the disk password
-# prompt for encrypted installs, and any boot messages.
+# Lareon OS boot screen.
+#
+# Normal start: the Lareon mark on the dark Lareon background, gently pulsing.
+# Encrypted disk: the password prompt with orange dots; after a wrong password
+#   "That password didn't unlock the disk. Try again."
+# Updates (Plymouth mode "updates"/"system-upgrade"): "Installing updates",
+#   a progress bar in the brand gradient, and the update tool's messages.
+# Start-up problems: /usr/lib/lareon/emergency sends one of these messages and
+#   this script shows the matching Lareon screen:
+#     lareon-error-drive    a drive check failed
+#     lareon-error-generic  anything else
+#     lareon-repairing      repairing in progress
+#
+# Pictures (the fixed parts, drawn in Geist at build time) come from
+# artwork/render_boot_screens.py.
 
 Window.SetBackgroundTopColor(0.075, 0.067, 0.106);     # #13111b
 Window.SetBackgroundBottomColor(0.075, 0.067, 0.106);
 
-size = 160;
-if (Window.GetHeight() < 700) size = 120;
+W = Window.GetWidth();
+H = Window.GetHeight();
+X0 = Window.GetX();
+Y0 = Window.GetY();
 
+# scale everything down a little on small screens
+scale = 1;
+if (H < 800) scale = 0.8;
+if (H < 620) scale = 0.65;
+
+fun load(name) {
+    local.img = Image(name);
+    if (global.scale < 1) local.img = local.img.Scale(local.img.GetWidth() * global.scale, local.img.GetHeight() * global.scale);
+    return local.img;
+}
+fun place_center(sprite, image, dy) {
+    sprite.SetPosition(global.X0 + global.W / 2 - image.GetWidth() / 2,
+                       global.Y0 + global.H / 2 - image.GetHeight() / 2 + dy, 10);
+}
+
+# ---- normal start
+size = 160 * scale;
 logo.image = Image("lareon.png").Scale(size, size);
 logo.sprite = Sprite(logo.image);
-logo.x = Window.GetX() + Window.GetWidth() / 2 - size / 2;
-logo.y = Window.GetY() + Window.GetHeight() / 2 - size / 2 - 40;
-logo.sprite.SetPosition(logo.x, logo.y, 10);
+logo.y = Y0 + H / 2 - size / 2 - 40;
+logo.sprite.SetPosition(X0 + W / 2 - size / 2, logo.y, 10);
 
+# ---- the other screens, hidden until needed
+screens.drive.image = load("error-drive.png");
+screens.drive.sprite = Sprite(screens.drive.image);
+place_center(screens.drive.sprite, screens.drive.image, 0);
+screens.generic.image = load("error-generic.png");
+screens.generic.sprite = Sprite(screens.generic.image);
+place_center(screens.generic.sprite, screens.generic.image, 0);
+screens.repairing.image = load("repairing.png");
+screens.repairing.sprite = Sprite(screens.repairing.image);
+place_center(screens.repairing.sprite, screens.repairing.image, -40);
+screens.updates.image = load("updates.png");
+screens.updates.sprite = Sprite(screens.updates.image);
+place_center(screens.updates.sprite, screens.updates.image, -60);
+
+bar.track = load("bar-track.png");
+bar.fill_full = load("bar-fill.png");
+bar.track_sprite = Sprite(bar.track);
+bar.fill_sprite = Sprite(bar.fill_full);
+bar.x = X0 + W / 2 - bar.track.GetWidth() / 2;
+bar.y = Y0 + H / 2 + 110 * scale;
+bar.track_sprite.SetPosition(bar.x, bar.y, 11);
+bar.fill_sprite.SetPosition(bar.x, bar.y, 12);
+
+wrong.image = load("wrong-password.png");
+wrong.sprite = Sprite(wrong.image);
+wrong.sprite.SetPosition(X0 + W / 2 - wrong.image.GetWidth() / 2, logo.y + size + 118 * scale, 20);
+
+current = "boot";
+progress = -1;   # update progress in percent, -1 = not known
+
+fun show(name) {
+    global.current = name;
+    global.logo.sprite.SetOpacity(0);
+    global.screens.drive.sprite.SetOpacity(0);
+    global.screens.generic.sprite.SetOpacity(0);
+    global.screens.repairing.sprite.SetOpacity(0);
+    global.screens.updates.sprite.SetOpacity(0);
+    global.bar.track_sprite.SetOpacity(0);
+    global.bar.fill_sprite.SetOpacity(0);
+    global.wrong.sprite.SetOpacity(0);
+    global.status.sprite = NULL;
+    clear_prompt();
+    if (name == "boot") global.logo.sprite.SetOpacity(1);
+    if (name == "drive") global.screens.drive.sprite.SetOpacity(1);
+    if (name == "generic") global.screens.generic.sprite.SetOpacity(1);
+    if (name == "repairing") {
+        global.screens.repairing.sprite.SetOpacity(1);
+        global.bar.track_sprite.SetOpacity(1);
+        global.bar.fill_sprite.SetOpacity(1);
+    }
+    if (name == "updates") {
+        global.screens.updates.sprite.SetOpacity(1);
+        global.bar.track_sprite.SetOpacity(1);
+        global.bar.fill_sprite.SetOpacity(1);
+    }
+}
+
+# ---- animation, and switching to the updates screen when Plymouth's mode says so
 tick = 0;
 fun refresh_callback() {
     global.tick++;
-    logo.sprite.SetOpacity(0.78 + 0.22 * Math.Sin(global.tick / 22));
+    if (global.current == "boot") {
+        global.logo.sprite.SetOpacity(0.78 + 0.22 * Math.Sin(global.tick / 22));
+        mode = Plymouth.GetMode();
+        if (mode == "updates" || mode == "system-upgrade" || mode == "firmware-upgrade") show("updates");
+    }
+    if (global.current == "updates" || global.current == "repairing") {
+        if (global.progress < 0) {
+            # no percentage known: the bar breathes instead
+            global.bar.fill_sprite.SetOpacity(0.45 + 0.4 * Math.Sin(global.tick / 18));
+        }
+    }
 }
 Plymouth.SetRefreshFunction(refresh_callback);
 
-# ---- password / question prompts ------------------------------------------
+fun system_update_callback(percent) {
+    global.progress = Math.Clamp(percent, 0, 100);
+    w = Math.Max(1, global.bar.fill_full.GetWidth() * global.progress / 100);
+    global.bar.fill_sprite.SetImage(global.bar.fill_full.Scale(w, global.bar.fill_full.GetHeight()));
+    global.bar.fill_sprite.SetOpacity(1);
+}
+
+# ---- text helpers (for the parts that change)
 fun text_sprite(text, y, r, g, b) {
     local.img = Image.Text(text, r, g, b, 1);
-    local.spr = Sprite(img);
-    local.spr.SetPosition(Window.GetX() + Window.GetWidth() / 2 - img.GetWidth() / 2, y, 20);
+    local.spr = Sprite(local.img);
+    local.spr.SetPosition(global.X0 + global.W / 2 - local.img.GetWidth() / 2, y, 20);
     return local.spr;
 }
+
+# ---- disk password
+prompt_shown = 0;
+submitted = 0;
+last_prompt = "";
 
 fun clear_prompt() {
     global.prompt.label = NULL;
@@ -35,29 +145,38 @@ fun clear_prompt() {
 }
 
 fun display_password_callback(text, bullets) {
+    if (global.current != "boot") show("boot");
     clear_prompt();
     if (text == "") text = "Password";
+    # The same prompt again after one was submitted means the password was wrong.
+    if (global.submitted == 1 && text == global.last_prompt && bullets == 0) global.wrong.sprite.SetOpacity(1);
+    if (bullets > 0) global.wrong.sprite.SetOpacity(0);
+    global.submitted = 0;
+    global.prompt_shown = 1;
+    global.last_prompt = text;
     dots = "";
     i = 0;
     while (i < bullets) {
         dots += "•";
         i++;
     }
-    if (dots == "") dots = " ";
-    base = logo.y + size + 48;
-    global.prompt.label = text_sprite(text, base, 0.925, 0.914, 0.961);      # #ece9f5
-    global.prompt.field = text_sprite(dots, base + 32, 1.0, 0.486, 0.122);   # #ff7c1f
+    if (dots == "") dots = "_";
+    base = global.logo.y + global.size + 48 * global.scale;
+    global.prompt.label = text_sprite(text, base, 0.925, 0.914, 0.961);       # #ece9f5
+    global.prompt.field = text_sprite(dots, base + 32 * global.scale, 1.0, 0.486, 0.122);   # #ff7c1f
 }
 
 fun display_question_callback(text, entry) {
     clear_prompt();
-    base = logo.y + size + 48;
+    base = global.logo.y + global.size + 48 * global.scale;
     global.prompt.label = text_sprite(text, base, 0.925, 0.914, 0.961);
-    if (entry == "") entry = " ";
-    global.prompt.field = text_sprite(entry, base + 32, 1.0, 0.486, 0.122);
+    if (entry == "") entry = "_";
+    global.prompt.field = text_sprite(entry, base + 32 * global.scale, 1.0, 0.486, 0.122);
 }
 
 fun display_normal_callback() {
+    if (global.prompt_shown == 1) global.submitted = 1;
+    global.prompt_shown = 0;
     clear_prompt();
 }
 
@@ -65,13 +184,28 @@ Plymouth.SetDisplayPasswordFunction(display_password_callback);
 Plymouth.SetDisplayQuestionFunction(display_question_callback);
 Plymouth.SetDisplayNormalFunction(display_normal_callback);
 
-# ---- boot messages (e.g. "checking disk") -----------------------------------
+# ---- messages: Lareon screen switches, update status, or ordinary boot messages
 fun message_callback(text) {
-    global.message.sprite = text_sprite(text, Window.GetY() + Window.GetHeight() - 64, 0.655, 0.643, 0.729);  # #a7a4ba
+    if (text == "lareon-error-drive") { show("drive"); return; }
+    if (text == "lareon-error-generic") { show("generic"); return; }
+    if (text == "lareon-repairing") { show("repairing"); return; }
+    if (text == "lareon-boot") { show("boot"); return; }
+    if (global.current == "updates" || global.current == "repairing") {
+        global.status.sprite = text_sprite(text, global.bar.y + 26 * global.scale, 0.655, 0.643, 0.729);   # #a7a4ba
+        return;
+    }
+    if (global.current == "boot")
+        global.status.sprite = text_sprite(text, global.Y0 + global.H - 64, 0.655, 0.643, 0.729);
 }
 Plymouth.SetMessageFunction(message_callback);
 
 fun quit_callback() {
-    logo.sprite.SetOpacity(1);
+    if (global.current == "boot") global.logo.sprite.SetOpacity(1);
 }
 Plymouth.SetQuitFunction(quit_callback);
+
+show("boot");
+
+# Last on purpose: older Plymouth script plugins may not deliver update progress;
+# everything above already works without it (the bar breathes instead).
+Plymouth.SetSystemUpdateFunction(system_update_callback);

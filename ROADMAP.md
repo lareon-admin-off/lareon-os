@@ -37,24 +37,54 @@ Right now Lareon's own pieces only update by reinstalling. Before real users:
   software to every Lareon OS machine. Store it only as a GitHub secret.
 - Debian's own security updates already flow from Debian; nothing to do there.
 
-## Stage 2 — The Lareon installer  · M–L
-- Own Calamares settings instead of Debian's, using the QML versions of the
-  screens (`welcomeq`, `localeq`, `keyboardq`, `usersq`, `summaryq`) so each
-  page can be laid out in the Lareon style.
-- Language: the 17 languages and flags in `docs/LANGUAGES.md` (Darija with the
-  Algerian flag; Arabic, Farsi and Darija right to left), reusing the Lareon
-  desktop app's translations for Lareon's own screens. Calamares' built-in
-  screens are translated by the Calamares project; Darija isn't one of its
-  languages, so those screens would show in Arabic or English for Darija.
-- Drives: Calamares' partition screen (erase disk / alongside / manual) plus
-  the encryption checkbox. Restyle it, don't rebuild it: partitioning is where
-  bugs lose people's data.
-- Theme choice (light/dark): small custom QML page.
-- **Recommendation: move Lareon account sign-in to the first-boot welcome
-  tour, not the installer.** The installer often runs without Wi-Fi, and a
-  sign-in made there has to be carried into the new system, which is extra
-  code handling passwords. On first boot the user is online and in their own
-  account.
+## Stage 2 — Install and set up with no desktop showing  · M–L
+
+**Rule: nobody sees the desktop until setup is finished.** Mockups of the whole
+flow are in the "setup flow" PNGs (boot menu, installer, first-start setup).
+
+### 2a. The USB stick boots straight into the installer  · S–M
+- Lareon boot menu (GRUB theme) with **Install Lareon OS** as the default
+  (starts by itself after 8 seconds), then **Try Lareon OS without
+  installing**, **Install with safe graphics** and **Firmware settings**.
+- "Install" starts a special session that runs only the installer, full
+  screen: no panel, no desktop, no other apps. Mostly configuration: the live
+  system signs in automatically to a session whose only program is Calamares
+  in a bare window manager, and closing it restarts or shuts down.
+- "Try" keeps today's live desktop, so people can check Wi-Fi, sound and the
+  screen before erasing anything. Keep it: without it, broken hardware is only
+  discovered after the drive is wiped.
+
+### 2b. The installer itself: three short steps  · M
+- **Language**: the 17 languages and flags in `docs/LANGUAGES.md` (Darija with
+  the Algerian flag; Arabic, Farsi and Darija right to left), plus keyboard.
+  Lareon's own screens reuse the Lareon desktop app's translations. Calamares'
+  built-in text comes from the Calamares project, which has no Darija, so those
+  bits would show in Arabic or English for Darija.
+- **Drive**: erase / install next to Windows / manual, plus "Encrypt the drive"
+  with its password. Calamares' partitioning logic, restyled, not rebuilt:
+  partitioning is where bugs lose people's data.
+- **Install**: progress with the Lareon slideshow, then restart.
+- No user account in the installer. Calamares' "OEM" mode installs the system
+  and leaves account creation to the first start.
+- Built with Calamares' QML pages so every page can follow the Lareon layout
+  (full screen, step bar, Back/Continue).
+
+### 2c. First-start setup, before the desktop exists  · M–L
+- On the first start the computer goes to a full-screen Lareon setup instead of
+  the sign-in screen. Steps: **Wi-Fi**, **your account** (name, username,
+  password, computer name, picture), **Lareon account** (sign in, create one,
+  or skip), **look** (Lareon Dark / Light, time-of-day wallpaper), **privacy**
+  (crash reports ask/never, real sunrise from time zone only, automatic update
+  checks), then **"You're all set"** → the desktop appears for the first time.
+- Lareon account sign-in lives here, not in the installer: the user is online
+  and the sign-in goes straight into their own account.
+- This replaces the stage 5 welcome tour (one custom app, not two).
+- Technically it's a small app that runs once with permission to create the
+  first user, then removes itself. KDE has been building a first-start setup
+  tool of its own (Plasma Setup); check its state before writing ours, since
+  restyling it would be less code to maintain.
+- Risk to test hard: if setup crashes halfway, the computer must still be
+  usable (it reopens setup on the next start rather than leaving no account).
 
 ## Stage 3 — Lareon Settings and Files  · M
 - **Lareon Settings**: a friendly home screen (Display, Wi-Fi, Sound, Accounts,
@@ -78,13 +108,13 @@ Right now Lareon's own pieces only update by reinstalling. Before real users:
 - **Aster hotkey**: a global shortcut (e.g. Meta+Space) that opens Aster.
   Needs the Lareon desktop app to accept something like `lareon://aster` or
   `--aster` to jump straight to it.
-- First-boot welcome tour: Lareon account sign-in, theme, wallpaper, privacy.
+- First-start setup (stage 2c) covers the welcome tour: account, Lareon sign-in, theme, privacy.
 
 ### Custom apps: keep it to three
 | Need | Use |
 |---|---|
 | Lareon Settings | **custom** (home screen over real settings) |
-| Welcome tour | **custom** |
+| First-start setup | **custom** (stage 2c; or a restyled KDE Plasma Setup) |
 | Aster helper | the Lareon desktop app + a hotkey |
 | Notes / Dusk | Dusk inside the Lareon desktop app |
 | Files | Dolphin, restyled |

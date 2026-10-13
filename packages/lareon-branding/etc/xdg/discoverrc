@@ -1,0 +1,4 @@
+# Lareon OS: install system updates while restarting (shows the Lareon
+# "Installing updates" screen) instead of while you work.
+[Software]
+UseOfflineUpdates=true

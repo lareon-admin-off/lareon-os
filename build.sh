@@ -22,6 +22,59 @@ say()  { printf '\n\033[1;38;2;255;124;31m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
+# ------------------------------------------------------------ 0. preflight
+# Every file the build reads, checked up front so a missing one is reported
+# straight away (all of them at once) instead of half way through.
+REQUIRED_FILES=(
+    VERSION
+    artwork/render_wallpapers.py artwork/make_color_schemes.py
+    artwork/kit/palettes.css artwork/kit/lareon-scene.js
+    artwork/brand/fonts/OFL.txt
+    packagelists/required.list packagelists/optional.list
+    packages/lareon-timeofday/DEBIAN/control
+    packages/lareon-timeofday/usr/bin/lareon-timeofday
+    packages/lareon-branding/DEBIAN/control
+    packages/lareon-branding/DEBIAN/postinst
+    packages/lareon-branding/usr/share/lareon/os-release
+    packages/lareon-branding/usr/share/lareon/issue
+    packages/lareon-branding/usr/share/lareon/issue.net
+    packages/lareon-branding/usr/share/plymouth/themes/lareon/lareon.plymouth
+    packages/lareon-branding/usr/share/plymouth/themes/lareon/lareon.script
+    live/auto/config
+    artwork/render_boot_screens.py
+    apps/lareon-ui/CMakeLists.txt
+    packages/lareon-ui/DEBIAN/control
+    packages/lareon-live/DEBIAN/control
+    packages/lareon-live/etc/calamares/branding/lareon/branding.desc
+    packages/lareon-live/etc/calamares/branding/lareon/welcomeq.qml
+    live/config/hooks/normal/0900-lareon-bootmenu.hook.binary
+)
+for theme in org.lareon.desktop org.lareon.desktop.light; do
+    for f in metadata.json contents/defaults contents/splash/Splash.qml \
+             contents/layouts/org.kde.plasma.desktop-layout.js; do
+        REQUIRED_FILES+=("packages/lareon-branding/usr/share/plasma/look-and-feel/$theme/$f")
+    done
+done
+for f in lareon-icon.svg lareon-icon-256.png lareon-icon-512.png lareon-app-icon.png \
+         fledge-logo.svg fledge-logo-256.png fledge-logo-512.png \
+         aster-logo.svg aster-logo-256.png aster-logo-512.png \
+         dusk-logo.svg dusk-logo-256.png dusk-logo-512.png \
+         ember-logo.svg ember-logo-256.png ember-logo-512.png; do
+    REQUIRED_FILES+=("artwork/brand/logos/$f")
+done
+for f in Geist-Regular Geist-Medium Geist-SemiBold Geist-Bold GeistMono-Regular GeistMono-Medium; do
+    REQUIRED_FILES+=("artwork/brand/fonts/$f.ttf")
+done
+missing=()
+for f in "${REQUIRED_FILES[@]}"; do
+    [ -f "$ROOT/$f" ] || missing+=("$f")
+done
+if [ ${#missing[@]} -gt 0 ]; then
+    printf '\033[1;31merror:\033[0m these files are missing from the repo:\n' >&2
+    printf '  %s\n' "${missing[@]}" >&2
+    exit 1
+fi
+
 rm -rf "$WORK"
 mkdir -p "$WORK" "$OUT"
 
@@ -76,16 +129,20 @@ install -Dm644 "$BRAND/fonts/OFL.txt" "$BP/usr/share/doc/lareon-branding/geist-O
 # Colour schemes and system-wide desktop defaults
 python3 "$ROOT/artwork/make_color_schemes.py" "$BP/usr/share/color-schemes" "$BP/etc/xdg/kdeglobals"
 
-# Global themes (System Settings > Colors & Themes > Global Theme)
+# Global themes (System Settings > Colors & Themes > Global Theme). Both theme
+# folders are committed as real files; the build only adds the Lareon mark for
+# the splash screen and the preview pictures.
 LNF="$BP/usr/share/plasma/look-and-feel"
-make_theme() {  # id  name  description  scheme  icons  splash-bg  splash-track  preview-frame
+finish_theme() {  # theme-id  preview-frame
     local d="$LNF/$1"
-    cp -a "$LNF/lareon-template" "$d"
+    for f in metadata.json contents/defaults contents/splash/Splash.qml \
+             contents/layouts/org.kde.plasma.desktop-layout.js; do
+        [ -f "$d/$f" ] || die "packages/lareon-branding/usr/share/plasma/look-and-feel/$1/$f is missing"
+    done
     install -Dm644 "$LOGOS/lareon-icon.svg" "$d/contents/splash/images/lareon-icon.svg"
-    sed -i -e "s/@ID@/$1/g" -e "s/@NAME@/$2/g" -e "s/@DESCRIPTION@/$3/g" -e "s/@SCHEME@/$4/g" \
-           -e "s/@ICONS@/$5/g" -e "s/@BG@/$6/g" -e "s/@TRACK@/$7/g" \
-           "$d/metadata.json" "$d/contents/defaults" "$d/contents/splash/Splash.qml"
-    python3 - "$WALL/f$8.png" "$d/contents/previews" <<'PY'
+    rm -rf "$d/contents/previews"   # always regenerated, so stale files can't linger
+    mkdir -p "$d/contents/previews"
+    python3 - "$WALL/f$2.png" "$d/contents/previews" <<'PY'
 import os, sys
 from PIL import Image
 src, out = sys.argv[1:3]
@@ -94,9 +151,50 @@ im.resize((1920, 1080), Image.LANCZOS).save(os.path.join(out, "fullscreenpreview
 im.resize((480, 270), Image.LANCZOS).save(os.path.join(out, "preview.png"))
 PY
 }
-make_theme org.lareon.desktop       "Lareon Dark"  "The Lareon OS look, dark"  LareonDark  breeze-dark "#13111b" "#2b2838" 00
-make_theme org.lareon.desktop.light "Lareon Light" "The Lareon OS look, light" LareonLight breeze      "#f4effb" "#d9d0ea" 16
-rm -rf "$LNF/lareon-template"
+finish_theme org.lareon.desktop       00   # dark: night frame
+finish_theme org.lareon.desktop.light 16   # light: day frame
+
+# Boot screens (Plymouth pictures, GRUB themes for the USB stick and installed system)
+GRUB_LIVE="$WORK/grub-live"
+python3 "$ROOT/artwork/render_boot_screens.py" "$BP/usr/share/plymouth/themes/lareon" \
+    "$GRUB_LIVE" "$BP/usr/share/grub/themes/lareon" "$WALL/f00.png"
+if command -v grub-mkfont >/dev/null 2>&1; then
+    for d in "$GRUB_LIVE" "$BP/usr/share/grub/themes/lareon"; do
+        for sz in 14 16 18; do grub-mkfont -n Geist -s $sz -o "$d/geist-regular-$sz.pf2" "$BRAND/fonts/Geist-Regular.ttf"; done
+        for sz in 18 28; do grub-mkfont -n Geist -s $sz -o "$d/geist-bold-$sz.pf2" "$BRAND/fonts/Geist-Bold.ttf"; done
+    done
+else
+    warn "grub-mkfont not found: boot menus will use GRUB's default font"
+fi
+
+# Installer branding: exact logos and wallpaper slides
+CAL="$WORK/packages/lareon-live/etc/calamares/branding/lareon"
+cp "$LOGOS/lareon-icon-256.png" "$LOGOS/lareon-icon-512.png" "$CAL/"
+python3 - "$WALL" "$CAL" <<'PY'
+import os, sys
+from PIL import Image
+wall, cal = sys.argv[1:3]
+for i, f in enumerate([24, 0, 8, 16], 1):
+    Image.open(os.path.join(wall, f"f{f:02d}.png")).convert("RGB").resize((1280, 720), Image.LANCZOS) \
+        .save(os.path.join(cal, f"slide-{i}.jpg"), quality=88)
+PY
+
+# lareon-ui (C++/Qt). SKIP_UI_BUILD=1 skips it (and lareon-live) on machines without Qt.
+if [ "${SKIP_UI_BUILD:-}" = 1 ]; then
+    warn "SKIP_UI_BUILD=1: not building lareon-ui or lareon-live"
+    rm -rf "$WORK/packages/lareon-ui" "$WORK/packages/lareon-live"
+else
+    say "Compiling lareon-ui"
+    command -v cmake >/dev/null || die "cmake and Qt 6 dev packages are needed (or set SKIP_UI_BUILD=1)"
+    cmake -S "$ROOT/apps/lareon-ui" -B "$WORK/build-ui" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr >/dev/null
+    cmake --build "$WORK/build-ui" -j"$(nproc)"
+    DESTDIR="$WORK/packages/lareon-ui" cmake --install "$WORK/build-ui" >/dev/null
+    mkdir -p "$WORK/shlibs/debian"
+    printf 'Source: lareon-ui\n\nPackage: lareon-ui\nArchitecture: amd64\n' > "$WORK/shlibs/debian/control"
+    shlibs=$(cd "$WORK/shlibs" && dpkg-shlibdeps -O -e"$WORK/packages/lareon-ui/usr/bin/lareon-ui" 2>/dev/null | sed -n 's/^shlibs:Depends=//p')
+    [ -n "$shlibs" ] || die "dpkg-shlibdeps found no libraries for lareon-ui"
+    sed -i "s|@SHLIBS@|$shlibs|" "$WORK/packages/lareon-ui/DEBIAN/control"
+fi
 
 # ------------------------------------------------------------ 2. packages
 say "Building Lareon packages ($VERSION)"
@@ -104,17 +202,22 @@ say "Building Lareon packages ($VERSION)"
 { grep -rlI '@VERSION@' "$WORK/packages" || true; } | while read -r f; do
     sed -i "s/@VERSION@/$VERSION/g" "$f"
 done
+# .gitkeep files only exist so git keeps empty folders; they don't ship
+find "$WORK/packages" -name .gitkeep -delete
 mkdir -p "$WORK/debs"
 for p in "$WORK"/packages/*/; do
     name="$(basename "$p")"
     find "$p" -type d -exec chmod 755 {} +
     find "$p" -type f ! -path '*/DEBIAN/*' -exec chmod 644 {} +
-    [ -f "$p/usr/bin/$name" ] && chmod 755 "$p/usr/bin/$name"
+    for x in "$p"usr/bin/* "$p"usr/lib/lareon/* "$p"etc/grub.d/*; do
+        [ -f "$x" ] && chmod 755 "$x"
+    done
     for s in postinst prerm postrm preinst; do
         [ -f "$p/DEBIAN/$s" ] && chmod 755 "$p/DEBIAN/$s"
     done
-    dpkg-deb --root-owner-group -Zxz --build "$p" "$WORK/debs/${name}_${VERSION}_all.deb" >/dev/null
-    echo "built ${name}_${VERSION}_all.deb"
+    arch=$(sed -n 's/^Architecture: //p' "$p/DEBIAN/control")
+    dpkg-deb --root-owner-group -Zxz --build "$p" "$WORK/debs/${name}_${VERSION}_${arch}.deb" >/dev/null
+    echo "built ${name}_${VERSION}_${arch}.deb"
 done
 cp "$WORK"/debs/*.deb "$OUT/"
 
@@ -126,22 +229,15 @@ fi
 # ------------------------------------------------------------ 3. live-build tree
 cp -a "$ROOT/live" "$WORK/live"
 LIVE="$WORK/live"
+find "$LIVE" -name .gitkeep -delete
 # (git doesn't store empty folders, so make the ones live-build expects)
 mkdir -p "$LIVE/config/packages.chroot" "$LIVE/config/package-lists"
 cp "$WORK"/debs/*.deb "$LIVE/config/packages.chroot/"
 
-CAL="$LIVE/config/includes.chroot_after_packages/etc/calamares/branding/lareon"
-sed -i "s/@VERSION@/$VERSION/g" "$CAL/branding.desc"
-cp "$LOGOS/lareon-icon-256.png" "$LOGOS/lareon-icon-512.png" "$CAL/"
-python3 - "$WALL" "$CAL" <<'PY'
-import os, sys
-from PIL import Image
-wall, cal = sys.argv[1:3]
-# installer slides: the Lareon scene at dusk, night, dawn and day
-for i, f in enumerate([24, 0, 8, 16], 1):
-    Image.open(os.path.join(wall, f"f{f:02d}.png")).convert("RGB").resize((1280, 720), Image.LANCZOS) \
-        .save(os.path.join(cal, f"slide-{i}.jpg"), quality=88)
-PY
+# Lareon GRUB theme for the USB stick (the boot menu hook uses it)
+mkdir -p "$LIVE/config/includes.binary/boot/grub"
+cp -a "$GRUB_LIVE" "$LIVE/config/includes.binary/boot/grub/lareon"
+sed -i "s/@VERSION@/$VERSION/g" "$LIVE/config/includes.binary/boot/grub/lareon/theme.txt"
 
 # ------------------------------------------------------------ 4. Lareon apps
 say "Looking for Linux builds of the Lareon apps"

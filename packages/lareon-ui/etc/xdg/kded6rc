@@ -1,0 +1,4 @@
+# Lareon OS shows its own "Your drive is almost full" notification
+# (lareon-notify), so Plasma's would be a duplicate.
+[Module-freespacenotifier]
+autoload=false

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Lareon setup
+Comment=First-start setup for Lareon OS
+Exec=/usr/lib/lareon/first-start-session
+NoDisplay=true
+Hidden=false
+DesktopNames=Lareon

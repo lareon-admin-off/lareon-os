@@ -45,3 +45,18 @@ fonts-noto-core
 # Installer
 calamares
 calamares-settings-debian
+
+# Lareon screens (first-start setup, installer session, crash dialog, notifications)
+python3-yaml
+dbus-user-session
+libnotify-bin
+systemd-coredump
+os-prober
+kde-cli-tools
+fonts-noto-color-emoji
+qml6-module-qtquick
+qml6-module-qtquick-controls
+qml6-module-qtquick-layouts
+qml6-module-qtquick-window
+qml6-module-qtquick-templates
+qml6-module-qtqml-workerscript

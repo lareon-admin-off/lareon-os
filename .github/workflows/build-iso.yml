@@ -20,13 +20,30 @@ jobs:
       - name: Tools
         run: |
           apt-get update -qq
-          apt-get install -y -qq python3 python3-pil python3-numpy dpkg-dev shellcheck lintian >/dev/null
+          apt-get install -y -qq python3 python3-pil python3-numpy python3-yaml dpkg-dev shellcheck lintian cmake g++ qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools qt6-qpa-plugins qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtquick-window qml6-module-qtquick-templates qml6-module-qtqml-workerscript fonts-noto-color-emoji grub-common >/dev/null
       - name: Lint shell scripts
-        run: shellcheck -S warning build.sh live/auto/* live/config/hooks/normal/*.hook.chroot packages/*/DEBIAN/post* packages/*/DEBIAN/pre*
+        run: shellcheck -S warning build.sh tools/*.sh live/auto/* live/config/hooks/normal/*.hook.chroot packages/*/DEBIAN/post* packages/*/DEBIAN/pre*
       - name: Test the time-of-day logic
         run: python3 tests/test_timeofday.py
       - name: Build packages
         run: ./build.sh --packages-only
+      - name: Screenshots of the Lareon screens (download the "screenshots" artifact)
+        run: |
+          for d in out/*.deb; do dpkg -x "$d" /; done
+          fc-cache -f >/dev/null
+          mkdir -p shots
+          for p in wifi you lareon look privacy done; do
+            QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui setup --page $p --screenshot shots/setup-$p.png
+          done
+          QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui install-failed --screenshot shots/install-failed.png
+          QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui crash --set name=Files --screenshot shots/crash.png
+          for f in packages/lareon-live/etc/calamares/branding/lareon/*.qml packages/lareon-branding/usr/share/plasma/look-and-feel/*/contents/*/*.qml; do
+            /usr/lib/qt6/bin/qmlformat "$f" >/dev/null || { echo "QML syntax error in $f"; exit 1; }
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots/*.png
       - name: Check packages
         run: |
           for d in out/*.deb; do dpkg-deb --info "$d" >/dev/null; lintian --no-tag-display-limit "$d" || true; done
@@ -66,7 +83,7 @@ jobs:
               apt-get update -qq
               apt-get install -y -qq live-build python3 python3-pil python3-numpy curl ca-certificates \
                 dpkg-dev xz-utils squashfs-tools xorriso grub-efi-amd64-bin grub-pc-bin mtools \
-                dosfstools syslinux syslinux-common isolinux >/dev/null
+                dosfstools syslinux syslinux-common isolinux grub-common cmake g++ qt6-base-dev qt6-declarative-dev >/dev/null
               ./build.sh
             '
           sudo chown -R "$(id -u):$(id -g)" out

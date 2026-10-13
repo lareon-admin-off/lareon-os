@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Lareon OS
+Icon=lareon
+Exec=lareon-ui
+NoDisplay=true

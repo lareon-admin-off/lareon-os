@@ -1,0 +1,42 @@
+#!/bin/sh
+# Lareon: when to show the boot menu (it's hidden otherwise).
+set -e
+
+# Another operating system installed? Then always show the menu for 5 seconds.
+other_os=""
+if [ "${GRUB_DISABLE_OS_PROBER}" = "false" ] && command -v os-prober >/dev/null 2>&1; then
+    if [ -n "$(os-prober 2>/dev/null)" ]; then other_os=1; fi
+fi
+
+# GRUB can only write its settings file on a plain filesystem (not encrypted,
+# LVM, RAID or btrfs). Elsewhere, only Lareon OS changes it (grub-editenv).
+writable=1
+abstraction=$(grub-probe --target=abstraction /boot/grub 2>/dev/null || true)
+fs=$(grub-probe --target=fs /boot/grub 2>/dev/null || true)
+if [ -n "$abstraction" ]; then writable=""; fi
+case "$fs" in btrfs|zfs|"") writable="" ;; esac
+
+cat <<'GRUB'
+# --- Lareon: show the menu after a start that didn't finish, or on request
+if [ "${lareon_booting}" = "1" -o "${lareon_show_menu}" = "1" ]; then
+    set timeout_style=menu
+    set timeout=30
+fi
+GRUB
+if [ -n "$writable" ]; then
+    cat <<'GRUB'
+# remember that a start began; lareon-boot-ok.service clears it once it finished
+set lareon_booting=1
+save_env lareon_booting
+GRUB
+fi
+
+if [ -n "$other_os" ]; then
+    cat <<'GRUB'
+if [ "${timeout_style}" = "hidden" ]; then
+    set timeout_style=menu
+    set timeout=5
+fi
+GRUB
+fi
+exit 0

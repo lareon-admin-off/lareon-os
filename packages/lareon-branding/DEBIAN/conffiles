@@ -5,3 +5,6 @@
 /etc/xdg/kcm-about-distrorc
 /etc/sddm.conf.d/10-lareon.conf
 /etc/fonts/conf.d/60-lareon-geist.conf
+/etc/xdg/discoverrc
+/etc/grub.d/05_lareon
+/etc/grub.d/11_lareon_recovery

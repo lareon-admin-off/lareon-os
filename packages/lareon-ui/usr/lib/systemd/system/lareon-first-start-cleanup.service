@@ -1,0 +1,12 @@
+[Unit]
+Description=Remove the temporary Lareon setup account once setup has finished
+ConditionPathExists=!/var/lib/lareon/first-start-pending
+Before=display-manager.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'rm -f /etc/sddm.conf.d/zz-lareon-first-login.conf /etc/sudoers.d/lareon-setup; if id lareon-setup >/dev/null 2>&1; then userdel --remove lareon-setup || true; fi; systemctl disable lareon-first-start-cleanup.service'
+
+[Install]
+WantedBy=multi-user.target

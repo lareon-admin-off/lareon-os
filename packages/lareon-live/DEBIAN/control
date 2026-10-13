@@ -1,0 +1,12 @@
+Package: lareon-live
+Version: @VERSION@
+Architecture: all
+Maintainer: Lareon <help@lareon.org>
+Depends: lareon-ui (= @VERSION@), lareon-branding (= @VERSION@), calamares, calamares-settings-debian, python3-yaml, kwin-wayland, sudo
+Section: admin
+Priority: optional
+Homepage: https://lareon.org/
+Description: Lareon OS live USB: full-screen installer
+ Lareon installer pages and settings, and the boot-menu modes that open the
+ installer full screen (no desktop) or the live desktop. Only used on the
+ live USB; the installer removes it from the installed system.
