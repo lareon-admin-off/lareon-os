@@ -1,7 +1,12 @@
 #!/bin/sh
 # Live USB "Install Lareon OS": KWin running only the installer, full screen.
 export QT_QUICK_CONTROLS_STYLE=Basic
+LOG=/tmp/lareon-installer-session.log
+{
+    echo "installer-session started $(date) as $(id -un) display=$WAYLAND_DISPLAY runtime=$XDG_RUNTIME_DIR"
+} >> "$LOG" 2>&1
 kwin_wayland --locale1 --no-lockscreen --no-global-shortcuts \
-    --exit-with-session=/usr/lib/lareon/installer-run
+    --exit-with-session=/usr/lib/lareon/installer-run >> "$LOG" 2>&1
+echo "kwin_wayland exited with code $? at $(date)" >> "$LOG"
 # The installer was closed without installing: open the live desktop instead.
 exec sudo -n /usr/lib/lareon/live-mode try --restart

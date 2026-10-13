@@ -16,6 +16,13 @@ user=lareon
 for arg in $(cat /proc/cmdline); do
     case "$arg" in username=*|live-config.username=*) user="${arg#*=}" ;; esac
 done
+# Live session only (this service runs only when booted with boot=live): give
+# the live account the well-known live password, so a text console or the login
+# screen always works when something else goes wrong. The installed system
+# gets its own account from the installer; this one is removed there.
+if [ -z "$LAREON_NO_PASSWD" ] && getent passwd "$user" >/dev/null 2>&1; then
+    echo "$user:live" | chpasswd 2>/dev/null || true
+fi
 case "$mode" in
     install) session=lareon-installer.desktop ;;
     *)       session=plasma.desktop ;;
