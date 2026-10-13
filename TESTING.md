@@ -14,7 +14,16 @@ Test once with EFI on and once with it off (older "BIOS" PCs boot differently).
 ### Live session
 - [ ] Boot menu appears and starts the live system
 - [ ] Reaches the Plasma desktop without asking for a password
+- [ ] Boot screen: the Lareon mark on the dark Lareon background, gently pulsing
+- [ ] Sign-in splash: the Lareon mark with an orange-to-violet progress bar
 - [ ] Wallpaper is the Lareon mountains, at the right time of day
+- [ ] The app launcher button (bottom left) is the Lareon mark
+- [ ] Menus, buttons and window titles are in **Geist**; Konsole is in **Geist Mono**
+- [ ] Selected items and focus rings are Lareon orange; windows use the Lareon dark colours
+- [ ] System Settings → Colors & Themes → Global Theme lists **Lareon Dark** and
+      **Lareon Light**; switching to Light and back works
+- [ ] Type some Arabic, Hindi, Chinese, Japanese and Korean text (e.g. in KWrite):
+      it shows real letters, not empty boxes
 - [ ] Open Konsole and run `lareon-timeofday status`: frame and schedule look right
 - [ ] `lareon-timeofday table` lists the day's changes
 - [ ] **Watch it change**: run these, wait for each, check the wallpaper
@@ -39,7 +48,10 @@ Test once with EFI on and once with it off (older "BIOS" PCs boot differently).
 - [ ] App launcher → **Install Lareon OS** opens the installer with Lareon colours and logo
 - [ ] Slideshow plays during install
 - [ ] Install with **Erase disk**, no encryption → reboot → signs in, wallpaper works
-- [ ] Install again with **Encrypt system** → asks for the password at boot → works
+- [ ] Install again with **Encrypt system** → at boot the Lareon screen shows a
+      password prompt; dots appear as you type (orange); it unlocks. **If the
+      prompt is invisible**, type the password anyway and press Enter, then
+      tell me: it means the boot screen's text isn't drawing
 - [ ] Boot menu says **Lareon OS**
 - [ ] Sign-in screen shows the mountains at the current time of day
 - [ ] Run `sudo apt update && sudo apt full-upgrade`, reboot: still **Lareon OS**

@@ -27,7 +27,7 @@ for one person working part-time.
 - [x] Installer with Lareon colours, logo and slideshow (Debian's install steps)
 - [x] Flathub in Discover; telemetry pinned off
 - [ ] **You:** first CI build, test in a VM ([TESTING.md](TESTING.md))
-- [ ] **You:** real logo into `artwork/brand/lareon-logo.png`
+- [x] Lareon brand kit: logos, Geist fonts, Lareon Dark/Light themes, boot screen, sign-in splash
 
 ## Stage 1.5 — Lareon update channel  · S  (do before anyone installs it for real)
 Right now Lareon's own pieces only update by reinstalling. Before real users:
@@ -41,9 +41,11 @@ Right now Lareon's own pieces only update by reinstalling. Before real users:
 - Own Calamares settings instead of Debian's, using the QML versions of the
   screens (`welcomeq`, `localeq`, `keyboardq`, `usersq`, `summaryq`) so each
   page can be laid out in the Lareon style.
-- Language: the same 17 languages and flags as the Lareon app. *Send me the
-  list.* Calamares itself is translated by its own project; languages it
-  doesn't cover will show partly in English inside the installer.
+- Language: the 17 languages and flags in `docs/LANGUAGES.md` (Darija with the
+  Algerian flag; Arabic, Farsi and Darija right to left), reusing the Lareon
+  desktop app's translations for Lareon's own screens. Calamares' built-in
+  screens are translated by the Calamares project; Darija isn't one of its
+  languages, so those screens would show in Arabic or English for Darija.
 - Drives: Calamares' partition screen (erase disk / alongside / manual) plus
   the encryption checkbox. Restyle it, don't rebuild it: partitioning is where
   bugs lose people's data.
@@ -64,12 +66,11 @@ Right now Lareon's own pieces only update by reinstalling. Before real users:
   sidebar and Lareon right-click actions. Not a new file manager.
 
 ## Stage 4 — Lareon shell  · L
-- A Plasma global theme package: panel layout, launcher, light and dark colour
-  schemes with the orange (#ff7c1f) to violet (#a35cf5) gradient, your fonts.
-  *Send me the font files and check their licences allow redistribution.*
-- Custom launcher if Kickoff can't be styled far enough (a QML widget).
-- Boot animation (Plymouth), boot menu theme, sign-in screen (own SDDM QML
-  theme), sound set.
+- Done in stage 1: Lareon Dark/Light global themes, colour schemes, Geist
+  fonts, launcher mark, boot screen, sign-in splash.
+- Next: a Lareon Plasma style (panel and widget shapes), custom launcher if
+  Kickoff can't be styled far enough (a QML widget), boot menu theme, own
+  sign-in screen (SDDM QML theme), sound set.
 
 ## Stage 5 — Lareon apps and Aster  · M
 - Preinstall the Lareon desktop app and Ember: needs Linux `.deb` builds in

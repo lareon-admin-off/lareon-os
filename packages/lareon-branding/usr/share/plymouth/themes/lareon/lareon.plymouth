@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Lareon
+Description=Lareon OS boot screen
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/lareon
+ScriptFile=/usr/share/plymouth/themes/lareon/lareon.script

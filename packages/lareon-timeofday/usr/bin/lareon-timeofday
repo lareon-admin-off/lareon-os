@@ -253,7 +253,7 @@ def user_picked_own_wallpaper():
             for line in f:
                 if line.startswith("Image="):
                     val = line.split("=", 1)[1].strip()
-                    if val and WALLDIR not in val:
+                    if val and WALLDIR not in val and LINKDIR not in val:
                         return True
     except OSError:
         pass

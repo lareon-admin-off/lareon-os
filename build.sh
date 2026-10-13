@@ -37,22 +37,66 @@ for i in $(seq -w 0 31); do
     [ -f "$WALL/f$i.png" ] || die "wallpaper frame f$i.png is missing"
 done
 
-BRAND="$WORK/brand"
-mkdir -p "$BRAND"
-if [ -f "$ROOT/artwork/brand/lareon-logo.png" ]; then
-    cp "$ROOT/artwork/brand/lareon-logo.png" "$BRAND/"
-else
-    warn "artwork/brand/lareon-logo.png not found; using the placeholder mark"
-    python3 "$ROOT/artwork/render_brand.py" "$BRAND"
-fi
-mkdir -p "$WORK/packages/lareon-branding/usr/share/pixmaps"
-cp "$BRAND/lareon-logo.png" "$WORK/packages/lareon-branding/usr/share/pixmaps/lareon-logo.png"
-mkdir -p "$WORK/packages/lareon-branding/usr/share/icons/hicolor/256x256/apps"
-python3 - "$BRAND/lareon-logo.png" "$WORK/packages/lareon-branding/usr/share/icons/hicolor/256x256/apps/lareon.png" <<'PY'
-import sys
+# Lareon brand kit: exact files, copied as they are (never redrawn)
+BRAND="$ROOT/artwork/brand"
+LOGOS="$BRAND/logos"
+for f in lareon-icon.svg lareon-icon-256.png lareon-icon-512.png lareon-app-icon.png \
+         fledge-logo.svg fledge-logo-256.png fledge-logo-512.png \
+         aster-logo.svg aster-logo-256.png aster-logo-512.png \
+         dusk-logo.svg dusk-logo-256.png dusk-logo-512.png \
+         ember-logo.svg ember-logo-256.png ember-logo-512.png; do
+    [ -f "$LOGOS/$f" ] || die "artwork/brand/logos/$f is missing (it comes from the Lareon brand kit)"
+done
+BP="$WORK/packages/lareon-branding"
+HI="$BP/usr/share/icons/hicolor"
+install_icon() {  # icon-name  brand-kit-file-prefix
+    install -Dm644 "$LOGOS/$2.svg"     "$HI/scalable/apps/$1.svg"
+    install -Dm644 "$LOGOS/$2-256.png" "$HI/256x256/apps/$1.png"
+    install -Dm644 "$LOGOS/$2-512.png" "$HI/512x512/apps/$1.png"
+}
+install_icon lareon        lareon-icon   # the company mark = the OS logo
+install_icon lareon-fledge fledge-logo
+install_icon lareon-aster  aster-logo
+install_icon lareon-dusk   dusk-logo
+install_icon lareon-ember  ember-logo
+install -Dm644 "$LOGOS/lareon-icon-512.png" "$BP/usr/share/pixmaps/lareon-logo.png"
+install -Dm644 "$LOGOS/lareon-app-icon.png" "$BP/usr/share/pixmaps/lareon-desktop.png"
+install -Dm644 "$LOGOS/lareon-icon-256.png" "$BP/usr/share/plymouth/themes/lareon/lareon.png"
+
+# Geist fonts. The static files cover the weights the desktop uses; the
+# variable files are the same family again, and installing both makes apps
+# pick between duplicates unpredictably.
+for f in Geist-Regular Geist-Medium Geist-SemiBold Geist-Bold GeistMono-Regular GeistMono-Medium; do
+    [ -f "$BRAND/fonts/$f.ttf" ] || die "artwork/brand/fonts/$f.ttf is missing"
+    install -Dm644 "$BRAND/fonts/$f.ttf" "$BP/usr/share/fonts/truetype/geist/$f.ttf"
+done
+install -Dm644 "$BRAND/fonts/OFL.txt" "$BP/usr/share/fonts/truetype/geist/OFL.txt"
+install -Dm644 "$BRAND/fonts/OFL.txt" "$BP/usr/share/doc/lareon-branding/geist-OFL.txt"
+
+# Colour schemes and system-wide desktop defaults
+python3 "$ROOT/artwork/make_color_schemes.py" "$BP/usr/share/color-schemes" "$BP/etc/xdg/kdeglobals"
+
+# Global themes (System Settings > Colors & Themes > Global Theme)
+LNF="$BP/usr/share/plasma/look-and-feel"
+make_theme() {  # id  name  description  scheme  icons  splash-bg  splash-track  preview-frame
+    local d="$LNF/$1"
+    cp -a "$LNF/lareon-template" "$d"
+    install -Dm644 "$LOGOS/lareon-icon.svg" "$d/contents/splash/images/lareon-icon.svg"
+    sed -i -e "s/@ID@/$1/g" -e "s/@NAME@/$2/g" -e "s/@DESCRIPTION@/$3/g" -e "s/@SCHEME@/$4/g" \
+           -e "s/@ICONS@/$5/g" -e "s/@BG@/$6/g" -e "s/@TRACK@/$7/g" \
+           "$d/metadata.json" "$d/contents/defaults" "$d/contents/splash/Splash.qml"
+    python3 - "$WALL/f$8.png" "$d/contents/previews" <<'PY'
+import os, sys
 from PIL import Image
-Image.open(sys.argv[1]).convert("RGBA").resize((256, 256), Image.LANCZOS).save(sys.argv[2])
+src, out = sys.argv[1:3]
+im = Image.open(src).convert("RGB")
+im.resize((1920, 1080), Image.LANCZOS).save(os.path.join(out, "fullscreenpreview.jpg"), quality=88)
+im.resize((480, 270), Image.LANCZOS).save(os.path.join(out, "preview.png"))
 PY
+}
+make_theme org.lareon.desktop       "Lareon Dark"  "The Lareon OS look, dark"  LareonDark  breeze-dark "#13111b" "#2b2838" 00
+make_theme org.lareon.desktop.light "Lareon Light" "The Lareon OS look, light" LareonLight breeze      "#f4effb" "#d9d0ea" 16
+rm -rf "$LNF/lareon-template"
 
 # ------------------------------------------------------------ 2. packages
 say "Building Lareon packages ($VERSION)"
@@ -88,17 +132,15 @@ cp "$WORK"/debs/*.deb "$LIVE/config/packages.chroot/"
 
 CAL="$LIVE/config/includes.chroot_after_packages/etc/calamares/branding/lareon"
 sed -i "s/@VERSION@/$VERSION/g" "$CAL/branding.desc"
-python3 - "$WALL" "$CAL" "$BRAND/lareon-logo.png" <<'PY'
+cp "$LOGOS/lareon-icon-256.png" "$LOGOS/lareon-icon-512.png" "$CAL/"
+python3 - "$WALL" "$CAL" <<'PY'
 import os, sys
 from PIL import Image
-wall, cal, logo = sys.argv[1:4]
-# installer slides: dusk, night, dawn, day frames
+wall, cal = sys.argv[1:3]
+# installer slides: the Lareon scene at dusk, night, dawn and day
 for i, f in enumerate([24, 0, 8, 16], 1):
     Image.open(os.path.join(wall, f"f{f:02d}.png")).convert("RGB").resize((1280, 720), Image.LANCZOS) \
         .save(os.path.join(cal, f"slide-{i}.jpg"), quality=88)
-lg = Image.open(logo).convert("RGBA")
-lg.resize((128, 128), Image.LANCZOS).save(os.path.join(cal, "logo.png"))
-lg.resize((256, 256), Image.LANCZOS).save(os.path.join(cal, "welcome.png"))
 PY
 
 # ------------------------------------------------------------ 4. Lareon apps

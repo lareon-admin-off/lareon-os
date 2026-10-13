@@ -26,8 +26,16 @@ Presentation {
             anchors.fill: parent
             gradient: Gradient {
                 GradientStop { position: 0.35; color: "#00000000" }
-                GradientStop { position: 1.0;  color: "#cc0d0a1c" }
+                GradientStop { position: 1.0;  color: "#e613111b" }
             }
+        }
+        Image {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.margins: 28
+            source: "lareon-icon-256.png"
+            sourceSize.width: 44
+            sourceSize.height: 44
         }
         Column {
             anchors.left: parent.left
@@ -37,7 +45,8 @@ Presentation {
             spacing: 10
             Text {
                 id: heading
-                color: "white"
+                color: "#ece9f5"
+                font.family: "Geist"
                 font.pixelSize: 30
                 font.weight: Font.DemiBold
                 wrapMode: Text.WordWrap
@@ -45,7 +54,8 @@ Presentation {
             }
             Text {
                 id: copy
-                color: "#e9e3f7"
+                color: "#a7a4ba"
+                font.family: "Geist"
                 font.pixelSize: 16
                 wrapMode: Text.WordWrap
                 width: parent.width

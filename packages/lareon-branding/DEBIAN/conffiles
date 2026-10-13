@@ -1,5 +1,7 @@
 /etc/default/grub.d/lareon.cfg
 /etc/xdg/kdeglobals
 /etc/xdg/plasmarc
+/etc/xdg/ksplashrc
 /etc/xdg/kcm-about-distrorc
 /etc/sddm.conf.d/10-lareon.conf
+/etc/fonts/conf.d/60-lareon-geist.conf

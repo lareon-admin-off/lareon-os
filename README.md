@@ -13,7 +13,9 @@ This repository is **stage 1: the proof of concept** (see [ROADMAP.md](ROADMAP.m
 |---|---|
 | `artwork/kit/` | The real Lareon scene and palettes, from the Lareon desktop app |
 | `artwork/render_wallpapers.py` | Draws the scene as 32 still frames (4 palettes + blends), 3840×2160 |
-| `artwork/render_brand.py` | Placeholder logo, used until `artwork/brand/lareon-logo.png` exists |
+| `artwork/brand/` | The Lareon brand kit: logos, Geist fonts, colours (exact files, never redrawn) |
+| `artwork/make_color_schemes.py` | Turns the brand colours into the Lareon Dark and Light colour schemes |
+| `docs/LANGUAGES.md` | The 17 languages for the installer and first-boot setup (stage 2) |
 | `packages/lareon-timeofday/` | The wallpaper switcher (`lareon-timeofday`) and its timers |
 | `packages/lareon-branding/` | System name, boot menu name, sign-in screen, desktop defaults |
 | `live/` | Debian live-build settings for the ISO, installer look, build hooks |
@@ -53,11 +55,20 @@ and `lareon-admin-off/ember` for an `amd64` `.deb` file and preinstalls any it
 finds. If those repos are private, add a repo secret `LAREON_RELEASES_TOKEN`
 (a GitHub token with read access to them).
 
-### Your logo
+### Brand kit
 
-Put your real logo at `artwork/brand/lareon-logo.png` (square, at least
-512×512, transparent background). It's used in the installer, About page and
-app icon. Until then a placeholder mark is used and the build prints a warning.
+`artwork/brand/` is the Lareon brand kit, used exactly as supplied:
+
+| File | Where it appears |
+|---|---|
+| `lareon-icon.svg` / `-256` / `-512` | The OS logo: app launcher button, About page, installer, boot screen, sign-in splash (icon name `lareon`) |
+| `lareon-app-icon.png` | Lareon desktop app icon (`/usr/share/pixmaps/lareon-desktop.png`) |
+| `fledge-`, `aster-`, `dusk-`, `ember-logo` | Installed as icons `lareon-fledge`, `lareon-aster`, `lareon-dusk`, `lareon-ember` for each product's launcher entry |
+| `Geist-*.ttf`, `GeistMono-*.ttf` | System interface font and monospace font, for every app (static weights; the variable files stay in the repo) |
+| Colours in `README.md` | Lareon Dark (default) and Lareon Light colour schemes and global themes |
+
+To update a logo, replace the file in `artwork/brand/logos/` with the same name.
+The build stops if any expected file is missing.
 
 ## The time-of-day wallpaper
 

@@ -35,6 +35,9 @@ locales
 python3
 tzdata
 plymouth
+# draws text on the boot screen (needed for the disk password prompt)
+plymouth-label
+fonts-dejavu-core
 pipewire-pulse
 wireplumber
 fonts-noto-core

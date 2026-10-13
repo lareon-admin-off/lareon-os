@@ -1,0 +1,77 @@
+# Lareon OS boot screen: the Lareon mark on the dark Lareon background,
+# gently breathing while the system starts. Also shows the disk password
+# prompt for encrypted installs, and any boot messages.
+
+Window.SetBackgroundTopColor(0.075, 0.067, 0.106);     # #13111b
+Window.SetBackgroundBottomColor(0.075, 0.067, 0.106);
+
+size = 160;
+if (Window.GetHeight() < 700) size = 120;
+
+logo.image = Image("lareon.png").Scale(size, size);
+logo.sprite = Sprite(logo.image);
+logo.x = Window.GetX() + Window.GetWidth() / 2 - size / 2;
+logo.y = Window.GetY() + Window.GetHeight() / 2 - size / 2 - 40;
+logo.sprite.SetPosition(logo.x, logo.y, 10);
+
+tick = 0;
+fun refresh_callback() {
+    global.tick++;
+    logo.sprite.SetOpacity(0.78 + 0.22 * Math.Sin(global.tick / 22));
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+# ---- password / question prompts ------------------------------------------
+fun text_sprite(text, y, r, g, b) {
+    local.img = Image.Text(text, r, g, b, 1);
+    local.spr = Sprite(img);
+    local.spr.SetPosition(Window.GetX() + Window.GetWidth() / 2 - img.GetWidth() / 2, y, 20);
+    return local.spr;
+}
+
+fun clear_prompt() {
+    global.prompt.label = NULL;
+    global.prompt.field = NULL;
+}
+
+fun display_password_callback(text, bullets) {
+    clear_prompt();
+    if (text == "") text = "Password";
+    dots = "";
+    i = 0;
+    while (i < bullets) {
+        dots += "•";
+        i++;
+    }
+    if (dots == "") dots = " ";
+    base = logo.y + size + 48;
+    global.prompt.label = text_sprite(text, base, 0.925, 0.914, 0.961);      # #ece9f5
+    global.prompt.field = text_sprite(dots, base + 32, 1.0, 0.486, 0.122);   # #ff7c1f
+}
+
+fun display_question_callback(text, entry) {
+    clear_prompt();
+    base = logo.y + size + 48;
+    global.prompt.label = text_sprite(text, base, 0.925, 0.914, 0.961);
+    if (entry == "") entry = " ";
+    global.prompt.field = text_sprite(entry, base + 32, 1.0, 0.486, 0.122);
+}
+
+fun display_normal_callback() {
+    clear_prompt();
+}
+
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+Plymouth.SetDisplayQuestionFunction(display_question_callback);
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+
+# ---- boot messages (e.g. "checking disk") -----------------------------------
+fun message_callback(text) {
+    global.message.sprite = text_sprite(text, Window.GetY() + Window.GetHeight() - 64, 0.655, 0.643, 0.729);  # #a7a4ba
+}
+Plymouth.SetMessageFunction(message_callback);
+
+fun quit_callback() {
+    logo.sprite.SetOpacity(1);
+}
+Plymouth.SetQuitFunction(quit_callback);

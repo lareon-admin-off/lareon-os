@@ -17,6 +17,8 @@ xdg-user-dirs
 plymouth-themes
 pipewire-alsa
 fonts-noto-color-emoji
+# Chinese, Japanese and Korean text (3 of Lareon's 17 languages); Geist has no CJK
+fonts-noto-cjk
 fonts-hack
 
 # Hardware support for real machines (Wi-Fi, graphics, sound, CPU fixes)

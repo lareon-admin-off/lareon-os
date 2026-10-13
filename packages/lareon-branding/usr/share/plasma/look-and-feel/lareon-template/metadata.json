@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [{ "Email": "help@lareon.org", "Name": "Lareon" }],
+        "Description": "@DESCRIPTION@",
+        "Id": "@ID@",
+        "License": "All rights reserved",
+        "Name": "@NAME@",
+        "Version": "@VERSION@",
+        "Website": "https://lareon.org/"
+    },
+    "X-Plasma-APIVersion": "2"
+}

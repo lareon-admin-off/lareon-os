@@ -24,18 +24,19 @@ strings:
     supportUrl:          "https://lareon.org/help"
     releaseNotesUrl:     "https://lareon.org/"
 
+# Exact files from the Lareon brand kit (copied in by build.sh)
 images:
-    productLogo:    "logo.png"
-    productIcon:    "logo.png"
-    productWelcome: "welcome.png"
+    productLogo:    "lareon-icon-256.png"
+    productIcon:    "lareon-icon-256.png"
+    productWelcome: "lareon-icon-512.png"
 
 slideshow:    "show.qml"
 slideshowAPI: 2
 
 style:
-    SidebarBackground:        "#1a1230"
-    SidebarText:              "#e9e3f7"
-    SidebarTextCurrent:       "#ffffff"
+    SidebarBackground:        "#13111b"
+    SidebarText:              "#a7a4ba"
+    SidebarTextCurrent:       "#13111b"
     SidebarBackgroundCurrent: "#ff7c1f"
 
 # No uploadServer: the installer never sends logs anywhere.

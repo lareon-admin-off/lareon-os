@@ -1,2 +1,4 @@
 [Theme]
-name=breeze-dark
+# "default" is Plasma's Breeze style, which takes its colours from the
+# Lareon colour scheme (unlike breeze-dark, which has fixed colours).
+name=default

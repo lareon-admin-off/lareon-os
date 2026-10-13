@@ -2,10 +2,11 @@ Package: lareon-branding
 Version: @VERSION@
 Architecture: all
 Maintainer: Lareon <help@lareon.org>
-Depends: lareon-timeofday (= @VERSION@)
+Depends: lareon-timeofday (= @VERSION@), fontconfig
+Recommends: plymouth, plymouth-label, plasma-workspace
 Section: misc
 Priority: optional
 Homepage: https://lareon.org/
 Description: Lareon OS identity and default look
- System name, boot menu name, sign-in screen and desktop defaults
- for Lareon OS.
+ The Lareon OS name, logos, Geist fonts, Lareon Dark and Light
+ desktop themes, boot screen, sign-in splash and desktop defaults.
