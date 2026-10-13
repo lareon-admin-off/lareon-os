@@ -32,7 +32,7 @@ Item {
                 elide: Text.ElideRight
                 color: "#ece9f5"
                 font.family: "Geist"
-                font.pixelSize: 14.5
+                font.pixelSize: 15
                 font.weight: index === list.model.currentIndex ? Font.DemiBold : Font.Normal
             }
             MouseArea {
@@ -71,7 +71,7 @@ Item {
             text: qsTr("Pick the layout printed on your keys. If you encrypt the drive, its password is typed with this layout every time the computer starts.")
             color: "#a7a4ba"
             font.family: "Geist"
-            font.pixelSize: 16.5
+            font.pixelSize: 17
         }
 
         RowLayout {

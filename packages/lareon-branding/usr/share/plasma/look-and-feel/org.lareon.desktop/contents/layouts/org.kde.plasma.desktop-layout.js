@@ -1,10 +1,16 @@
-// Lareon OS default desktop: Plasma's standard bottom panel, with the
-// Lareon mark on the app launcher and the time-of-day wallpaper.
+// Lareon OS default desktop: a floating, centred dock-style panel with the
+// Lareon mark on the app launcher, and the time-of-day wallpaper.
 loadTemplate("org.kde.plasma.desktop.defaultPanel")
 
 var allPanels = panels()
 for (var i = 0; i < allPanels.length; i++) {
-    var launchers = allPanels[i].widgets("org.kde.plasma.kickoff")
+    var p = allPanels[i]
+    // Look only: if this Plasma version doesn't know a setting, skip it.
+    try { p.floating = true } catch (e) {}
+    try { p.height = 50 } catch (e) {}
+    try { p.lengthMode = "fit" } catch (e) {}
+    try { p.alignment = "center" } catch (e) {}
+    var launchers = p.widgets("org.kde.plasma.kickoff")
     for (var j = 0; j < launchers.length; j++) {
         launchers[j].currentConfigGroup = ["General"]
         launchers[j].writeConfig("icon", "lareon")

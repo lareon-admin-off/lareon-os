@@ -1,0 +1,4 @@
+# Lareon: notifications slide in at the top right, clear of the dock.
+[Notifications]
+PopupPosition=TopRight
+PopupTimeout=6000

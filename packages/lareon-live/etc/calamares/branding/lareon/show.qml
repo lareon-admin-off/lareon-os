@@ -40,7 +40,7 @@ Presentation {
             text: qsTr("You can step away. The computer restarts by itself when it’s done.")
             color: "#a7a4ba"
             font.family: "Geist"
-            font.pixelSize: 16.5
+            font.pixelSize: 17
         }
     }
 

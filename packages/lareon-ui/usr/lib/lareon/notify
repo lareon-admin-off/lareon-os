@@ -102,6 +102,15 @@ def watch_disk():
         time.sleep(600)
 
 
+def live_session():
+    """The live USB keeps files in memory, so "almost full" means nothing there."""
+    try:
+        return "boot=live" in open("/proc/cmdline").read().split()
+    except OSError:
+        return False
+
+
 if __name__ == "__main__":
-    threading.Thread(target=watch_disk, daemon=True).start()
+    if not live_session():
+        threading.Thread(target=watch_disk, daemon=True).start()
     watch_network()

@@ -179,7 +179,7 @@ Item {
             text: pb.text
             color: pb.primary ? "#13111b" : "#ece9f5"
             font.family: "Geist"
-            font.pixelSize: 14.5
+            font.pixelSize: 15
             font.weight: pb.primary ? Font.DemiBold : Font.Medium
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter

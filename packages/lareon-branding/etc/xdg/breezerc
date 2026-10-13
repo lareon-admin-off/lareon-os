@@ -1,0 +1,10 @@
+# Lareon window frames: soft large shadow, centred title, no heavy borders.
+[Common]
+ShadowSize=ShadowLarge
+ShadowStrength=255
+OutlineCloseButton=false
+
+[Windeco]
+TitleAlignment=AlignCenter
+DrawBorderOnMaximizedWindows=false
+DrawSizeGrip=false

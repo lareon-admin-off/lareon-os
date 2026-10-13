@@ -70,7 +70,7 @@ Item {
             text: qsTr("Restarting in %1 seconds. Take out the USB stick when the screen goes dark.").arg(page.seconds)
             color: "#a7a4ba"
             font.family: "Geist"
-            font.pixelSize: 16.5
+            font.pixelSize: 17
         }
         Button {
             id: now
@@ -86,7 +86,7 @@ Item {
                 text: now.text
                 color: "#13111b"
                 font.family: "Geist"
-                font.pixelSize: 15.5
+                font.pixelSize: 16
                 font.weight: Font.DemiBold
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter

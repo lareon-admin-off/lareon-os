@@ -6,7 +6,7 @@ ColorScheme=LareonDark
 AccentColor=255,124,31
 
 [kdeglobals][Icons]
-Theme=breeze-dark
+Theme=Papirus-Dark
 
 [plasmarc][Theme]
 name=default

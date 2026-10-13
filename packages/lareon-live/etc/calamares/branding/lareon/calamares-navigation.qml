@@ -28,7 +28,7 @@ Rectangle {
             text: b.text
             color: !b.enabled ? "#74718a" : (b.primary ? "#13111b" : (b.ghost ? "#a7a4ba" : "#ece9f5"))
             font.family: "Geist"
-            font.pixelSize: 14.5
+            font.pixelSize: 15
             font.weight: b.primary ? Font.DemiBold : Font.Medium
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter

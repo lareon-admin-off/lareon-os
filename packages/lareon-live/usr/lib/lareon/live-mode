@@ -23,6 +23,22 @@ done
 if [ -z "$LAREON_NO_PASSWD" ] && getent passwd "$user" >/dev/null 2>&1; then
     echo "$user:live" | chpasswd 2>/dev/null || true
 fi
+# Desktop icon: Debian's "Install Debian" goes, ours stays.
+home=$(getent passwd "$user" | cut -d: -f6)
+if [ -n "$home" ] && [ -d "$home" ] && [ "$mode" != install ]; then
+    mkdir -p "$home/Desktop"
+    for f in "$home"/Desktop/*; do
+        [ -f "$f" ] || continue
+        case "$(basename "$f")" in
+            *ebian*|*alamares*|*nstall*) rm -f "$f" ;;
+        esac
+    done
+    if [ -f /usr/share/applications/lareon-install.desktop ]; then
+        cp /usr/share/applications/lareon-install.desktop "$home/Desktop/Install Lareon OS.desktop"
+        chmod +x "$home/Desktop/Install Lareon OS.desktop"
+    fi
+    chown -R "$user:" "$home/Desktop" 2>/dev/null || true
+fi
 case "$mode" in
     install) session=lareon-installer.desktop ;;
     *)       session=plasma.desktop ;;

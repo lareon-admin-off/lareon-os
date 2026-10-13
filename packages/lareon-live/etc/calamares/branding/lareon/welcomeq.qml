@@ -122,7 +122,7 @@ Item {
             text: qsTr("This is used for the installer and for Lareon OS. You can change it later in Settings.")
             color: "#a7a4ba"
             font.family: "Geist"
-            font.pixelSize: 16.5
+            font.pixelSize: 17
         }
 
         GridLayout {
@@ -160,7 +160,7 @@ Item {
                                 elide: Text.ElideRight
                                 color: "#ece9f5"
                                 font.family: "Geist"
-                                font.pixelSize: 14.5
+                                font.pixelSize: 15
                                 font.weight: Font.DemiBold
                             }
                             Text {
@@ -192,7 +192,7 @@ Item {
             text: qsTr("The installer itself isn’t translated into this language yet, so it shows in a close one. Lareon OS will use the language you chose.")
             color: "#a7a4ba"
             font.family: "Geist"
-            font.pixelSize: 13.5
+            font.pixelSize: 14
         }
 
         // the computer's requirements (storage, memory, power)
@@ -216,7 +216,7 @@ Item {
                       : config.warningMessage
                 color: parent.ok ? "#8fe0b8" : "#ffd0dc"
                 font.family: "Geist"
-                font.pixelSize: 13.5
+                font.pixelSize: 14
             }
         }
     }

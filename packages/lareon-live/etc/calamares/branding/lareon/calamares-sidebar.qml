@@ -68,7 +68,7 @@ Rectangle {
                         text: parent.parent.done ? "✓" : (index + 1)
                         color: parent.parent.current ? "#13111b" : "#a7a4ba"
                         font.family: "Geist"
-                        font.pixelSize: 11.5
+                        font.pixelSize: 12
                         font.weight: Font.DemiBold
                     }
                 }
