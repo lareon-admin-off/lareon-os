@@ -54,7 +54,7 @@ Item {
                     text: qsTr("Sorry about that. You can open it again now. If this keeps happening, saving a report and sending it to help@lareon.org helps Lareon fix it.")
                     color: Theme.muted
                     font.family: Theme.font
-                    font.pixelSize: 13.8
+                    font.pixelSize: 14
                     lineHeight: 1.2
                 }
                 Text {
@@ -64,7 +64,7 @@ Item {
                     text: qsTr("Reports are only saved if you choose to, and stay on this computer. They say what the app was doing, never your files or folder names.")
                     color: Theme.faint
                     font.family: Theme.font
-                    font.pixelSize: 12.5
+                    font.pixelSize: 13
                     lineHeight: 1.2
                 }
                 Rectangle {
@@ -91,7 +91,7 @@ Item {
                     text: qsTr("Saved to %1").arg(root.savedTo)
                     color: Theme.good
                     font.family: Theme.font
-                    font.pixelSize: 12.5
+                    font.pixelSize: 13
                 }
             }
         }

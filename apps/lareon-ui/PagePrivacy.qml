@@ -28,7 +28,7 @@ Item {
                     text: r.title
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 15.5
+                    font.pixelSize: 16
                     font.weight: Font.DemiBold
                 }
                 Text {
@@ -37,7 +37,7 @@ Item {
                     wrapMode: Text.Wrap
                     color: Theme.muted
                     font.family: Theme.font
-                    font.pixelSize: 13.8
+                    font.pixelSize: 14
                 }
             }
             Item {
@@ -66,7 +66,7 @@ Item {
             text: qsTr("Lareon OS doesn’t send anything about you. No ads, no tracking, no telemetry. These are the only choices that involve your data:")
             color: Theme.muted
             font.family: Theme.font
-            font.pixelSize: 16.5
+            font.pixelSize: 17
             lineHeight: 1.2
         }
 

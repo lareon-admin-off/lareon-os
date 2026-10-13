@@ -40,7 +40,7 @@ Item {
             }
             color: Theme.muted
             font.family: Theme.font
-            font.pixelSize: 16.5
+            font.pixelSize: 17
         }
         LButton {
             Layout.topMargin: 38

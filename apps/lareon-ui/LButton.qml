@@ -12,7 +12,7 @@ Button {
     leftPadding: 22
     rightPadding: 22
     font.family: Theme.font
-    font.pixelSize: size >= 42 ? 14.5 : 13
+    font.pixelSize: size >= 42 ? 15 : 13
     font.weight: kind === "primary" ? Font.DemiBold : Font.Medium
     hoverEnabled: true
 

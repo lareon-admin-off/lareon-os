@@ -32,7 +32,7 @@ Row {
                     text: index < root.current ? "✓" : (index + 1)
                     color: index === root.current ? Theme.textOnAccent : Theme.muted
                     font.family: Theme.font
-                    font.pixelSize: 11.5
+                    font.pixelSize: 12
                     font.weight: Font.DemiBold
                 }
             }

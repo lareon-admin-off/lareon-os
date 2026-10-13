@@ -80,7 +80,7 @@ Item {
             wrapMode: Text.Wrap
             color: Theme.muted
             font.family: Theme.font
-            font.pixelSize: 16.5
+            font.pixelSize: 17
             lineHeight: 1.2
         }
 
@@ -189,7 +189,7 @@ Item {
                 text: root.status
                 color: root.status.indexOf("Couldn") === 0 ? Theme.danger : Theme.muted
                 font.family: Theme.font
-                font.pixelSize: 13.5
+                font.pixelSize: 14
                 wrapMode: Text.Wrap
             }
             LButton {

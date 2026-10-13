@@ -51,7 +51,7 @@ Item {
             text: qsTr("This is how you sign in to this computer.")
             color: Theme.muted
             font.family: Theme.font
-            font.pixelSize: 16.5
+            font.pixelSize: 17
         }
 
         RowLayout {
@@ -96,7 +96,7 @@ Item {
                     text: qsTr("Choose picture")
                     color: Theme.violet
                     font.family: Theme.font
-                    font.pixelSize: 13.5
+                    font.pixelSize: 14
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor

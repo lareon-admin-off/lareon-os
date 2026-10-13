@@ -42,7 +42,7 @@ Item {
                     text: card.label
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 15.5
+                    font.pixelSize: 16
                     font.weight: Font.DemiBold
                 }
             }
@@ -70,7 +70,7 @@ Item {
             text: qsTr("Change it any time in Settings.")
             color: Theme.muted
             font.family: Theme.font
-            font.pixelSize: 16.5
+            font.pixelSize: 17
         }
 
         RowLayout {
@@ -97,14 +97,14 @@ Item {
                         text: qsTr("Wallpaper follows the time of day")
                         color: Theme.text
                         font.family: Theme.font
-                        font.pixelSize: 15.5
+                        font.pixelSize: 16
                         font.weight: Font.DemiBold
                     }
                     Text {
                         text: qsTr("Dawn, day, dusk and night, from your clock.")
                         color: Theme.muted
                         font.family: Theme.font
-                        font.pixelSize: 13.8
+                        font.pixelSize: 14
                     }
                 }
                 LToggle {

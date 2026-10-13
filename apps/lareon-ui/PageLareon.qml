@@ -35,7 +35,7 @@ Item {
             text: qsTr("One free account for all of Lareon. Optional: Lareon OS works fully without it.")
             color: Theme.muted
             font.family: Theme.font
-            font.pixelSize: 16.5
+            font.pixelSize: 17
         }
         Row {
             Layout.topMargin: 18
@@ -51,7 +51,7 @@ Item {
                         text: modelData[1]
                         color: Theme.muted
                         font.family: Theme.font
-                        font.pixelSize: 13.5
+                        font.pixelSize: 14
                     }
                 }
             }

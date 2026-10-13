@@ -123,7 +123,7 @@ Item {
                         wrapMode: Text.WrapAnywhere
                         color: /error|failed/i.test(modelData) ? Theme.danger : Theme.muted
                         font.family: Theme.mono
-                        font.pixelSize: 12.5
+                        font.pixelSize: 13
                     }
                 }
                 Text {
@@ -133,7 +133,7 @@ Item {
                     wrapMode: Text.Wrap
                     color: Theme.muted
                     font.family: Theme.mono
-                    font.pixelSize: 12.5
+                    font.pixelSize: 13
                 }
             }
         }
