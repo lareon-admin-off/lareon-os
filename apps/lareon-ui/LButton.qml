@@ -20,7 +20,7 @@ Button {
         text: control.text
         font: control.font
         color: !control.enabled ? Theme.faint
-             : control.kind === "primary" ? Theme.onAccent
+             : control.kind === "primary" ? Theme.textOnAccent
              : control.kind === "ghost" ? Theme.muted : Theme.text
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter

@@ -35,7 +35,7 @@ Column {
         color: Theme.text
         placeholderTextColor: Theme.faint
         selectionColor: Theme.accent
-        selectedTextColor: Theme.onAccent
+        selectedTextColor: Theme.textOnAccent
         font.family: Theme.font
         font.pixelSize: 15
         passwordCharacter: "•"

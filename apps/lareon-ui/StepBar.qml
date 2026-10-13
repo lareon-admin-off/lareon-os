@@ -30,7 +30,7 @@ Row {
                 Text {
                     anchors.centerIn: parent
                     text: index < root.current ? "✓" : (index + 1)
-                    color: index === root.current ? Theme.onAccent : Theme.muted
+                    color: index === root.current ? Theme.textOnAccent : Theme.muted
                     font.family: Theme.font
                     font.pixelSize: 11.5
                     font.weight: Font.DemiBold

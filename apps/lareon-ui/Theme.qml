@@ -12,7 +12,7 @@ QtObject {
     readonly property color faint: "#74718a"
     readonly property color accent: "#ff7c1f"
     readonly property color accentHover: "#ff8f3d"
-    readonly property color onAccent: "#13111b"
+    readonly property color textOnAccent: "#13111b"
     readonly property color violet: "#a35cf5"
     readonly property color magenta: "#d94fc4"
     readonly property color danger: "#ff4f7a"

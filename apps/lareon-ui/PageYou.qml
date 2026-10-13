@@ -79,7 +79,7 @@ Item {
                         anchors.centerIn: parent
                         visible: root.setup.avatar === ""
                         text: root.initials(root.setup.fullName)
-                        color: Theme.onAccent
+                        color: Theme.textOnAccent
                         font.family: Theme.font
                         font.pixelSize: 42
                         font.weight: Font.DemiBold
@@ -209,7 +209,7 @@ Item {
                         palette.base: Theme.bg
                         palette.window: Theme.panel
                         palette.highlight: Theme.accent
-                        palette.highlightedText: Theme.onAccent
+                        palette.highlightedText: Theme.textOnAccent
                         background: Rectangle {
                             radius: Theme.fieldRadius
                             color: Theme.bg
