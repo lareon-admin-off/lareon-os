@@ -1,0 +1,18 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Lareon"
+            }
+        ],
+        "Category": "",
+        "Description": "The Lareon desktop theme",
+        "EnabledByDefault": true,
+        "Id": "lareon",
+        "License": "LGPL",
+        "Name": "Lareon",
+        "Version": "1.0",
+        "Website": "https://lareon.org"
+    },
+    "X-Plasma-API": "5.0"
+}

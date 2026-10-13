@@ -3,7 +3,27 @@
 # screen; "Try again" runs it again, "Close" ends (exit 2).
 # When installing works, the installer restarts the computer itself.
 LOG=/tmp/lareon-install.log
+
+# A failed or closed install leaves the target drive mounted, and the
+# installer then refuses to erase it (it only offers manual partitioning).
+# Let go of everything it mounted before each start.
+release_drives() {
+    sudo -n sh -c '
+        for m in $(awk "{print \$2}" /proc/mounts | grep "^/tmp/calamares-root" | sort -r); do
+            umount -R -l "$m" 2>/dev/null
+        done
+        swapoff -a 2>/dev/null
+        for c in /dev/mapper/luks*; do
+            [ -e "$c" ] && cryptsetup close "$c" 2>/dev/null
+        done
+        command -v vgchange >/dev/null 2>&1 && vgchange -an 2>/dev/null
+        command -v partprobe >/dev/null 2>&1 && partprobe 2>/dev/null
+        true
+    ' || true
+}
+
 while :; do
+    release_drives
     rm -f /tmp/lareon-language
     sudo -n rm -f /root/.cache/calamares/session.log
     # The installer runs as root on this Wayland display. QML_XHR_ALLOW_FILE_WRITE
@@ -13,9 +33,10 @@ while :; do
             QML_XHR_ALLOW_FILE_WRITE=1 calamares
     code=$?
     sudo -n cat /root/.cache/calamares/session.log > "$LOG" 2>/dev/null || true
+    cp "$LOG" "$HOME/lareon-install-log.txt" 2>/dev/null
     if grep -q "Installation failed" "$LOG" 2>/dev/null; then
         lareon-ui install-failed --set "log=$LOG"
-        [ $? -eq 0 ] && continue
+        if [ $? -eq 0 ]; then release_drives; continue; fi
         exit 2
     fi
     exit "$code"

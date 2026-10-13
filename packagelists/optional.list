@@ -38,3 +38,8 @@ bluez
 # Virtual machines (screen resize and clipboard in virt-manager/GNOME Boxes)
 spice-vdagent
 papirus-icon-theme
+
+# Boot on computers with Secure Boot on (installed system)
+grub-efi-amd64-signed
+shim-signed
+mokutil

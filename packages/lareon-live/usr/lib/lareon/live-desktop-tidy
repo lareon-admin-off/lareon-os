@@ -1,0 +1,19 @@
+#!/bin/sh
+# Live USB only: the desktop shows "Install Lareon OS" and nothing from
+# Debian's installer. Runs at sign-in and keeps tidying for a minute in case
+# the live system adds its own icon late.
+grep -qw boot=live /proc/cmdline 2>/dev/null || exit 0
+dir="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
+i=0
+while [ "$i" -lt 30 ]; do
+    for f in "$dir"/*; do
+        [ -f "$f" ] || continue
+        [ "$(basename "$f")" = "Install Lareon OS.desktop" ] && continue
+        case "$(basename "$f")" in
+            *ebian*|*alamares*) rm -f "$f"; continue ;;
+        esac
+        if grep -qiE '^Exec=.*(calamares|install-debian)' "$f" 2>/dev/null; then rm -f "$f"; fi
+    done
+    i=$((i + 1))
+    sleep 2
+done

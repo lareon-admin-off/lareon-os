@@ -1,19 +1,212 @@
-/* Lareon installer styling. Window colours come from the Lareon Dark colour
-   scheme (the installer runs as root, which uses the system defaults). */
+/* Lareon installer styling for Calamares' own pages (the drive page, the
+   install progress and any dialogs). The Language, Keyboard and Finish
+   pages and the top bar are Lareon QML and don't use this file.
+
+   Colours: bg #13111b, card #1a1825, raised #211e2d, line #2b2838,
+   text #ece9f5, muted #a7a4ba, faint #74718a, accent #ff7c1f. */
 
 * {
     font-family: "Geist";
+    font-size: 14px;
 }
 
-QPushButton {
+QWidget#viewManager,
+QStackedWidget#viewManagerStack {
+    background-color: #13111b;
+}
+
+QLabel {
+    color: #ece9f5;
+    background: transparent;
+}
+
+QToolTip {
     background-color: #211e2d;
     color: #ece9f5;
     border: 1px solid #2b2838;
     border-radius: 8px;
-    padding: 7px 18px;
+    padding: 6px 10px;
+}
+
+/* Drive picker */
+QComboBox {
+    background-color: #1a1825;
+    color: #ece9f5;
+    border: 1px solid #2b2838;
+    border-radius: 10px;
+    padding: 9px 14px;
+    min-height: 22px;
+}
+QComboBox:hover {
+    border-color: #3a3648;
+}
+QComboBox:focus,
+QComboBox:on {
+    border-color: #ff7c1f;
+}
+QComboBox::drop-down {
+    border: none;
+    width: 30px;
+}
+QComboBox QAbstractItemView {
+    background-color: #1a1825;
+    color: #ece9f5;
+    border: 1px solid #2b2838;
+    border-radius: 8px;
+    padding: 4px;
+    outline: none;
+    selection-background-color: #ff7c1f;
+    selection-color: #13111b;
+}
+
+QLineEdit {
+    background-color: #1a1825;
+    color: #ece9f5;
+    border: 1px solid #2b2838;
+    border-radius: 10px;
+    padding: 9px 14px;
+    min-height: 22px;
+    selection-background-color: #ff7c1f;
+    selection-color: #13111b;
+}
+QLineEdit:focus {
+    border-color: #ff7c1f;
+}
+QLineEdit:disabled {
+    color: #74718a;
+}
+
+/* Choices: erase / alongside / replace / manual */
+QRadioButton {
+    color: #ece9f5;
+    background: transparent;
+    spacing: 12px;
+    padding: 6px 0px;
+}
+QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 11px;
+    border: 2px solid #3a3648;
+    background-color: transparent;
+}
+QRadioButton::indicator:hover {
+    border-color: #74718a;
+}
+QRadioButton::indicator:checked {
+    border: 2px solid #ff7c1f;
+    background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+        stop:0 #ff7c1f, stop:0.5 #ff7c1f, stop:0.56 #13111b, stop:1 #13111b);
+}
+
+QCheckBox {
+    color: #ece9f5;
+    background: transparent;
+    spacing: 12px;
+    padding: 4px 0px;
+}
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    border: 2px solid #3a3648;
+    background-color: transparent;
+}
+QCheckBox::indicator:hover {
+    border-color: #74718a;
+}
+QCheckBox::indicator:checked {
+    border: 2px solid #ff7c1f;
+    background-color: #ff7c1f;
+}
+
+QFrame#hLine {
+    background-color: #2b2838;
+    border: none;
+    max-height: 1px;
+}
+
+/* Scrolling lists */
+QScrollArea {
+    background: transparent;
+    border: none;
+}
+QScrollArea > QWidget > QWidget {
+    background: transparent;
+}
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 2px;
+}
+QScrollBar::handle:vertical {
+    background-color: #2b2838;
+    border-radius: 3px;
+    min-height: 30px;
+}
+QScrollBar::handle:vertical:hover {
+    background-color: #3a3648;
+}
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 2px;
+}
+QScrollBar::handle:horizontal {
+    background-color: #2b2838;
+    border-radius: 3px;
+    min-width: 30px;
+}
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
+/* Manual partitioning tables */
+QTreeView,
+QTableView,
+QListView {
+    background-color: #1a1825;
+    alternate-background-color: #1a1825;
+    color: #ece9f5;
+    border: 1px solid #2b2838;
+    border-radius: 12px;
+    outline: none;
+    selection-background-color: #ff7c1f;
+    selection-color: #13111b;
+}
+QHeaderView::section {
+    background-color: #1a1825;
+    color: #a7a4ba;
+    border: none;
+    border-bottom: 1px solid #2b2838;
+    padding: 8px;
+}
+
+/* Dialogs and messages */
+QDialog,
+QMessageBox {
+    background-color: #13111b;
+}
+
+/* Buttons */
+QPushButton {
+    background-color: #211e2d;
+    color: #ece9f5;
+    border: 1px solid #2b2838;
+    border-radius: 10px;
+    padding: 9px 22px;
+    min-height: 20px;
 }
 QPushButton:hover {
     border-color: #a35cf5;
+}
+QPushButton:pressed {
+    background-color: #2b2838;
 }
 QPushButton:disabled {
     color: #74718a;
@@ -34,6 +227,11 @@ QPushButton:disabled {
     color: #74718a;
 }
 
+/* While installing */
+QLabel#exec-message {
+    color: #a7a4ba;
+    font-size: 13px;
+}
 QProgressBar {
     background-color: #2b2838;
     border: none;

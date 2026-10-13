@@ -9,7 +9,7 @@ AccentColor=255,124,31
 Theme=Papirus-Light
 
 [plasmarc][Theme]
-name=default
+name=lareon
 
 [kcminputrc][Mouse]
 cursorTheme=breeze_cursors

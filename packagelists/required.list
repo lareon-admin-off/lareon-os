@@ -32,9 +32,6 @@ ca-certificates
 # System
 network-manager
 sudo
-# Debian live-config creates the live account through this package. It is only
-# a "recommends", and the image is built without recommends, so it is listed here.
-user-setup
 locales
 python3
 tzdata
@@ -49,6 +46,17 @@ fonts-noto-core
 # Installer
 calamares
 calamares-settings-debian
+# Boot loader for the installed system. The installer copies this image to the
+# drive and then runs grub-install, so grub must be inside the image: the
+# live disc's own boot files are made separately and are not copied over.
+# (-bin packages, not grub-pc / grub-efi-amd64, which conflict with each other.)
+grub-common
+grub2-common
+grub-pc-bin
+grub-efi-amd64-bin
+efibootmgr
+dosfstools
+e2fsprogs
 
 # Lareon screens (first-start setup, installer session, crash dialog, notifications)
 python3-yaml

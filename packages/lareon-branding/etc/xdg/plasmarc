@@ -1,4 +1,4 @@
 [Theme]
-# "default" is Plasma's Breeze style, which takes its colours from the
-# Lareon colour scheme (unlike breeze-dark, which has fixed colours).
-name=default
+# "lareon" is the Lareon theme (rounded dock and popups, see artwork/make_plasma_theme.py);
+# anything it does not draw falls back to Breeze, and colours follow the Lareon scheme.
+name=lareon
