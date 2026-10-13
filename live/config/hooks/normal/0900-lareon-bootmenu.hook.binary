@@ -14,7 +14,22 @@ kernel=$(echo "$line" | awk '{print $2}')
 options=$(echo "$line" | sed -E 's/^[[:space:]]*linux[[:space:]]+[^[:space:]]+[[:space:]]*//')
 initrd=$(grep -h -m1 -E '^[[:space:]]*initrd[[:space:]]' boot/grub/*.cfg | head -n1 | awk '{print $2}')
 [ -n "$kernel" ] && [ -n "$initrd" ] || { echo "lareon bootmenu: kernel/initrd not found in GRUB config" >&2; exit 1; }
-echo "lareon bootmenu: kernel=$kernel initrd=$initrd options=$options"
+
+# The live flags must come BEFORE the "--" separator: live-boot and live-config
+# only read what is in front of it, and without boot=live the live system,
+# its automatic sign-in and the installer never start.
+case " $options " in
+    *" -- "*) pre=${options%% -- *}; post=${options#* -- } ;;
+    *)        pre=$options;          post="" ;;
+esac
+case " $pre " in *" boot=live "*) ;; *) pre="boot=live $pre" ;; esac
+case " $pre " in *" components "*|*" components="*) ;; *) pre="$pre components" ;; esac
+case " $pre " in *" hostname="*) ;; *) pre="$pre hostname=lareon" ;; esac
+case " $pre " in *" username="*|*" live-config.username="*) ;; *) pre="$pre username=lareon" ;; esac
+pre=$(echo "$pre" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
+if [ -n "$post" ]; then tail_args=" -- $post"; else tail_args=""; fi
+options="$pre"
+echo "lareon bootmenu: kernel=$kernel initrd=$initrd options=$options$tail_args"
 
 fonts=""
 for f in boot/grub/lareon/*.pf2; do [ -f "$f" ] && fonts="$fonts
@@ -32,19 +47,25 @@ insmod font
 $fonts
 set gfxmode=auto
 terminal_output gfxterm
-set theme=/boot/grub/lareon/theme.txt
-export theme
+insmod gfxmenu
+insmod gfxterm_background
+# find the disc by the theme file, so the paths below always resolve
+search --no-floppy --file --set=root /boot/grub/lareon/theme.txt
+if [ -f /boot/grub/lareon/theme.txt ]; then
+    set theme=/boot/grub/lareon/theme.txt
+    export theme
+fi
 
 menuentry "Install Lareon OS" --class lareon {
-	linux $kernel $options lareon.mode=install
+	linux $kernel $options lareon.mode=install$tail_args
 	initrd $initrd
 }
 menuentry "Try Lareon OS without installing" --class lareon {
-	linux $kernel $options lareon.mode=try
+	linux $kernel $options lareon.mode=try$tail_args
 	initrd $initrd
 }
 menuentry "Install with safe graphics" --class lareon {
-	linux $kernel $options nomodeset lareon.mode=install
+	linux $kernel $options nomodeset lareon.mode=install$tail_args
 	initrd $initrd
 }
 if [ "\$grub_platform" = "efi" ]; then
