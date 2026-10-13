@@ -1,6 +1,10 @@
 #!/bin/sh
 # Add Flathub so Discover can install Flatpak apps out of the box.
-set -e
+# Never fail the image build over this: if the network or certificates are
+# not usable inside the build chroot, the image still builds without Flathub.
 if command -v flatpak >/dev/null; then
-    flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    update-ca-certificates >/dev/null 2>&1 || true
+    flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
+        || echo "warning: could not add Flathub during the build; add it later with: flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" >&2
 fi
+exit 0

@@ -27,6 +27,7 @@ ark
 # Apps store
 plasma-discover
 flatpak
+ca-certificates
 
 # System
 network-manager
