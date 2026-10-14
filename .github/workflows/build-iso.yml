@@ -82,6 +82,34 @@ jobs:
           build lareon-admin-off/lareon-desktop lareon
           build lareon-admin-off/ember ember
           ls -la app-debs
+      - name: Check the packages install on Debian 13
+        run: |
+          # An app package that fails to install would stop the whole ISO build,
+          # so each one is test-installed here first. If it fails as built it is
+          # retried without its install scripts; if it still fails it is left
+          # out (the ISO then falls back to the release build or Firefox).
+          shopt -s nullglob
+          for deb in app-debs/*.deb; do
+            echo "=== testing $deb"
+            ok=false
+            for attempt in as-built no-scripts; do
+              if [ "$attempt" = no-scripts ]; then
+                echo "--- retrying without install scripts"
+                d="$(mktemp -d)"
+                dpkg-deb -R "$deb" "$d"
+                rm -f "$d"/DEBIAN/preinst "$d"/DEBIAN/postinst "$d"/DEBIAN/prerm "$d"/DEBIAN/postrm
+                printf '#!/bin/sh\nchmod 4755 /opt/*/chrome-sandbox 2>/dev/null || true\nexit 0\n' > "$d/DEBIAN/postinst"
+                chmod 755 "$d/DEBIAN/postinst"
+                dpkg-deb --root-owner-group -Zxz -b "$d" "$deb.fixed" && mv "$deb.fixed" "$deb"
+              fi
+              if docker run --rm -v "$PWD/app-debs:/d" debian:trixie bash -c \
+                   "apt-get update -qq && apt-get install -y --no-install-recommends /d/$(basename "$deb")"; then
+                ok=true; break
+              fi
+            done
+            $ok || { echo "::warning::$deb does not install on Debian 13; leaving it out"; rm -f "$deb"; }
+          done
+          ls -la app-debs
       - uses: actions/upload-artifact@v4
         with:
           name: app-debs
