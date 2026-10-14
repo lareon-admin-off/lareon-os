@@ -16,12 +16,38 @@ user=lareon
 for arg in $(cat /proc/cmdline); do
     case "$arg" in username=*|live-config.username=*) user="${arg#*=}" ;; esac
 done
+# Safety net: Debian's live-config normally creates the live account. If it did
+# not (for example because its user-setup package is missing), create it here,
+# with the same groups and password-less sudo, so the automatic sign-in and the
+# installer (which runs through sudo) always work. Live session only: this
+# changes the running live system, never the image the installer copies.
+if ! getent passwd "$user" >/dev/null 2>&1; then
+    groups=""
+    for g in sudo audio video cdrom plugdev netdev users render input; do
+        getent group "$g" >/dev/null 2>&1 && groups="$groups,$g"
+    done
+    useradd --create-home --shell /bin/bash --comment "Lareon live session" \
+        ${groups:+--groups "${groups#,}"} "$user" 2>/dev/null || true
+    mkdir -p /etc/sudoers.d
+    printf '%s ALL=(ALL) NOPASSWD: ALL\n' "$user" > /etc/sudoers.d/lareon-live
+    chmod 0440 /etc/sudoers.d/lareon-live
+    visudo -cf /etc/sudoers.d/lareon-live >/dev/null 2>&1 || rm -f /etc/sudoers.d/lareon-live
+fi
 # Live session only (this service runs only when booted with boot=live): give
 # the live account the well-known live password, so a text console or the login
 # screen always works when something else goes wrong. The installed system
 # gets its own account from the installer; this one is removed there.
 if [ -z "$LAREON_NO_PASSWD" ] && getent passwd "$user" >/dev/null 2>&1; then
     echo "$user:live" | chpasswd 2>/dev/null || true
+    usermod -U "$user" 2>/dev/null || true
+    chage -E -1 -M -1 "$user" 2>/dev/null || true
+    # the installer runs through sudo -n, so password-less sudo must exist
+    if [ ! -f /etc/sudoers.d/lareon-live ]; then
+        mkdir -p /etc/sudoers.d
+        printf '%s ALL=(ALL) NOPASSWD: ALL\n' "$user" > /etc/sudoers.d/lareon-live
+        chmod 0440 /etc/sudoers.d/lareon-live
+        visudo -cf /etc/sudoers.d/lareon-live >/dev/null 2>&1 || rm -f /etc/sudoers.d/lareon-live
+    fi
 fi
 # Desktop icon: Debian's "Install Debian" goes, ours stays.
 home=$(getent passwd "$user" | cut -d: -f6)

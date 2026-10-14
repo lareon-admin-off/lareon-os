@@ -32,6 +32,9 @@ ca-certificates
 # System
 network-manager
 sudo
+# Debian live-config creates the live account through this package. It is only
+# a "recommends", and the image is built without recommends, so it is listed here.
+user-setup
 locales
 python3
 tzdata
