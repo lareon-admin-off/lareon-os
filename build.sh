@@ -274,6 +274,27 @@ for a in assets:
         warn "$repo has no amd64 .deb in its latest release; it won't be preinstalled"
     fi
 done
+# An app package must not ship a file one of our packages already owns (for
+# example the Lareon icon): dpkg refuses to install it and the build stops.
+# Our copy wins; the clashing files are taken out of the app package.
+say "Checking the app packages for files that clash with ours"
+OURS="$(mktemp)"
+for d in "$WORK"/debs/*.deb; do
+    dpkg-deb -c "$d" | awk '$1 !~ /^d/ {sub(/^\.\//, "", $6); print "/" $6}'
+done | sort -u > "$OURS"
+for d in "$LIVE"/config/packages.chroot/*.deb; do
+    [ -e "$WORK/debs/$(basename "$d")" ] && continue          # one of ours
+    clash="$(dpkg-deb -c "$d" | awk '$1 !~ /^d/ {sub(/^\.\//, "", $6); print "/" $6}' | sort -u | comm -12 - "$OURS" || true)"
+    [ -z "$clash" ] && continue
+    echo "$(basename "$d"): dropping files we already ship:"; echo "$clash" | sed 's/^/    /'
+    tmp="$(mktemp -d)"
+    dpkg-deb -R "$d" "$tmp"
+    while IFS= read -r f; do rm -f "$tmp$f"; done <<< "$clash"
+    dpkg-deb --root-owner-group -Zxz -b "$tmp" "$d.new" >/dev/null && mv "$d.new" "$d"
+    rm -rf "$tmp"
+done
+rm -f "$OURS"
+
 if ! $have_ember; then
     warn "no Ember .deb, so adding firefox-esr so the image still has a browser"
     EXTRA_PKGS+=(firefox-esr)
