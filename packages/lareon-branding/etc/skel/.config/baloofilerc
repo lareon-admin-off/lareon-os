@@ -1,0 +1,4 @@
+# Lareon: no background file indexing. It slows down the first start-up and
+# nothing in Lareon OS needs it.
+[Basic Settings]
+Indexing-Enabled=false

@@ -6,7 +6,7 @@ ColorScheme=LareonDark
 AccentColor=255,124,31
 
 [kdeglobals][Icons]
-Theme=Papirus-Dark
+Theme=Lareon
 
 [plasmarc][Theme]
 name=lareon
@@ -15,8 +15,10 @@ name=lareon
 cursorTheme=breeze_cursors
 
 [kwinrc][org.kde.kdecoration2]
-library=org.kde.breeze
-theme=Breeze
+library=org.kde.kwin.aurorae
+theme=__aurorae__svg__Lareon
+ButtonsOnLeft=M
+ButtonsOnRight=IAX
 
 [ksplashrc][KSplash]
 Engine=KSplashQML

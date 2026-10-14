@@ -244,6 +244,14 @@ say "Looking for Linux builds of the Lareon apps"
 EXTRA_PKGS=()
 have_ember=false
 for repo in "${APP_REPOS[@]}"; do
+    # built from source by the workflow (app-debs/): preferred over releases
+    built="$(ls -1 "$ROOT"/app-debs/"$(basename "$repo")"_*.deb 2>/dev/null | head -n1 || true)"
+    if [ -n "$built" ]; then
+        echo "$repo: using $(basename "$built")"
+        cp "$built" "$LIVE/config/packages.chroot/"
+        [[ "$repo" == */ember ]] && have_ember=true
+        continue
+    fi
     auth=()
     [ -n "${LAREON_RELEASES_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $LAREON_RELEASES_TOKEN")
     json="$(curl -fsSL "${auth[@]}" "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null || true)"

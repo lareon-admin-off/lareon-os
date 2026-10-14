@@ -1,19 +1,66 @@
-// Lareon OS default desktop: a floating, centred dock-style panel with the
-// Lareon mark on the app launcher, and the time-of-day wallpaper.
+// Lareon OS default desktop.
+//   top:    a slim bar - app grid on the left, clock in the middle, tray on the right
+//   bottom: a floating dock with only app icons (Lareon, Ember, Files, ...)
+//   behind: the time-of-day wallpaper
+// The stock Plasma panel is loaded first and removed only once the new bars
+// exist, so if anything below fails the desktop still comes up with a panel.
 loadTemplate("org.kde.plasma.desktop.defaultPanel")
 
-var allPanels = panels()
-for (var i = 0; i < allPanels.length; i++) {
-    var p = allPanels[i]
-    // Look only: if this Plasma version doesn't know a setting, skip it.
-    try { p.floating = true } catch (e) {}
-    try { p.height = 50 } catch (e) {}
-    try { p.lengthMode = "fit" } catch (e) {}
-    try { p.alignment = "center" } catch (e) {}
-    var launchers = p.widgets("org.kde.plasma.kickoff")
-    for (var j = 0; j < launchers.length; j++) {
-        launchers[j].currentConfigGroup = ["General"]
-        launchers[j].writeConfig("icon", "lareon")
+function lareonTry(fn) { try { fn() } catch (e) {} }
+
+var oldPanels = panels()
+var built = false
+try {
+    // ---- top bar ----
+    var top = new Panel
+    top.location = "top"
+    lareonTry(function () { top.height = 32 })
+    lareonTry(function () { top.floating = false })
+    lareonTry(function () { top.lengthMode = "fill" })
+    lareonTry(function () { top.opacity = "translucent" })
+
+    var grid = top.addWidget("org.kde.plasma.kickerdash")
+    lareonTry(function () {
+        grid.currentConfigGroup = ["General"]
+        grid.writeConfig("icon", "lareon")
+        grid.writeConfig("useCustomButtonImage", "true")
+        grid.writeConfig("customButtonImage", "lareon")
+    })
+    top.addWidget("org.kde.plasma.panelspacer")
+    var clock = top.addWidget("org.kde.plasma.digitalclock")
+    lareonTry(function () {
+        clock.currentConfigGroup = ["Appearance"]
+        clock.writeConfig("showDate", "true")
+        clock.writeConfig("dateFormat", "shortDate")
+        clock.writeConfig("use24hFormat", "2")
+    })
+    top.addWidget("org.kde.plasma.panelspacer")
+    top.addWidget("org.kde.plasma.systemtray")
+
+    // ---- bottom dock ----
+    var dock = new Panel
+    dock.location = "bottom"
+    lareonTry(function () { dock.height = 54 })
+    lareonTry(function () { dock.floating = true })
+    lareonTry(function () { dock.lengthMode = "fit" })
+    lareonTry(function () { dock.alignment = "center" })
+    var tasks = dock.addWidget("org.kde.plasma.icontasks")
+    lareonTry(function () {
+        tasks.currentConfigGroup = ["General"]
+        tasks.writeConfig("launchers",
+            "applications:lareon.desktop,applications:ember.desktop," +
+            "applications:org.kde.dolphin.desktop,applications:org.kde.discover.desktop," +
+            "applications:org.kde.konsole.desktop,applications:systemsettings.desktop")
+        tasks.writeConfig("showOnlyCurrentDesktop", "false")
+    })
+    built = true
+} catch (e) {
+    built = false
+}
+
+if (built) {
+    for (var i = 0; i < oldPanels.length; i++) {
+        lareonTry(function () { oldPanels[i].remove() })
     }
 }
 

@@ -52,14 +52,57 @@ jobs:
           name: lareon-packages
           path: out/*.deb
 
+  # Linux builds of the Lareon app and Ember, made from their source so the ISO
+  # always has them (their releases only carry AppImages).
+  apps:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the .deb packages
+        env:
+          TOKEN: ${{ secrets.LAREON_RELEASES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p app-debs
+          build() {  # repo, executable name
+            repo="$1"; exe="$2"; dir="src-$(basename "$repo")"
+            git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/${repo}.git" "$dir" || { echo "::warning::could not get $repo"; return 0; }
+            ( cd "$dir"
+              npm install --no-audit --no-fund
+              npx electron-builder --linux deb --x64 --publish never \
+                -c.linux.target=deb \
+                -c.linux.executableName="$exe" \
+                -c.linux.maintainer="Lareon <help@lareon.org>" \
+                -c.linux.artifactName='${name}_${version}_amd64.${ext}'
+              cp dist/*.deb ../app-debs/ ) || echo "::warning::could not build $repo"
+          }
+          build lareon-admin-off/lareon-desktop lareon
+          build lareon-admin-off/ember ember
+          ls -la app-debs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debs
+          path: app-debs/*.deb
+          if-no-files-found: warn
+
   # Full ISO: only when you ask for it (Actions tab -> Run workflow) or push a v* tag.
   iso:
-    needs: packages
-    if: github.event_name != 'pull_request'
+    needs: [packages, apps]
+    if: ${{ !cancelled() && needs.packages.result == 'success' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+
+      - name: Get the Lareon app and Ember builds
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: app-debs
+          path: app-debs
 
       - name: Free disk space on the runner
         run: |

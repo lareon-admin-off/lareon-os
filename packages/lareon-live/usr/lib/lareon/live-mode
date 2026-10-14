@@ -49,6 +49,23 @@ if [ -z "$LAREON_NO_PASSWD" ] && getent passwd "$user" >/dev/null 2>&1; then
         visudo -cf /etc/sudoers.d/lareon-live >/dev/null 2>&1 || rm -f /etc/sudoers.d/lareon-live
     fi
 fi
+# In a virtual machine there is no graphics card, so the desktop's blur and
+# fade effects are drawn by the CPU and feel slow. Turn them off there (live
+# session only; the installed system makes its own choice).
+if [ -n "$(getent passwd "$user" | cut -d: -f6)" ] && command -v systemd-detect-virt >/dev/null 2>&1 \
+   && systemd-detect-virt --quiet 2>/dev/null; then
+    vhome=$(getent passwd "$user" | cut -d: -f6)
+    if [ -d "$vhome" ] && [ ! -e "$vhome/.config/kwinrc" ]; then
+        mkdir -p "$vhome/.config"
+        cat > "$vhome/.config/kwinrc" <<'KWIN'
+[Plugins]
+blurEnabled=false
+contrastEnabled=false
+slidingpopupsEnabled=false
+KWIN
+        chown -R "$user:" "$vhome/.config" 2>/dev/null || true
+    fi
+fi
 # Desktop icon: Debian's "Install Debian" goes, ours stays.
 home=$(getent passwd "$user" | cut -d: -f6)
 if [ -n "$home" ] && [ -d "$home" ] && [ "$mode" != install ]; then

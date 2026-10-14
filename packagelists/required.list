@@ -60,6 +60,17 @@ grub-efi-amd64-bin
 efibootmgr
 dosfstools
 e2fsprogs
+# Tools the installer runs. The image is built without "recommends", so the
+# ones Calamares only recommends are listed here: unsquashfs unpacks the system
+# onto the drive (the install failed without it), the rest partition, format
+# and encrypt the drive.
+squashfs-tools
+parted
+rsync
+cryptsetup
+lvm2
+btrfs-progs
+xfsprogs
 
 # Lareon screens (first-start setup, installer session, crash dialog, notifications)
 python3-yaml

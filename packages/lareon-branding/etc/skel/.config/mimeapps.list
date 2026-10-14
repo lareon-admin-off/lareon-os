@@ -1,0 +1,8 @@
+# Lareon: links and web pages open in Ember.
+[Default Applications]
+x-scheme-handler/http=ember.desktop
+x-scheme-handler/https=ember.desktop
+x-scheme-handler/about=ember.desktop
+x-scheme-handler/unknown=ember.desktop
+text/html=ember.desktop
+application/xhtml+xml=ember.desktop
