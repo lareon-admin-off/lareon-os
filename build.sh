@@ -295,9 +295,65 @@ for d in "$LIVE"/config/packages.chroot/*.deb; do
 done
 rm -f "$OURS"
 
+# The apps' own menu entries are replaced by ours, so the icon is always the
+# Lareon one and the dock launchers (lareon.desktop, ember.desktop) always
+# point at a real program.
+say "Writing the menu entries for the Lareon apps"
+write_entry() {  # root  exe  Name  Comment  Icon  Categories
+    local root="$1" exe="$2" bin=""
+    if [ -e "$root/usr/bin/$exe" ] || [ -L "$root/usr/bin/$exe" ]; then
+        bin="/usr/bin/$exe"
+    else
+        bin="$(cd "$root" && find opt -maxdepth 2 -name "$exe" -type f 2>/dev/null | head -n1 || true)"
+        [ -n "$bin" ] && bin="/$bin"
+    fi
+    [ -z "$bin" ] && { warn "no '$exe' program inside the package"; return 1; }
+    rm -f "$root"/usr/share/applications/*.desktop
+    mkdir -p "$root/usr/share/applications"
+    cat > "$root/usr/share/applications/$exe.desktop" <<EOT
+[Desktop Entry]
+Type=Application
+Name=$3
+Comment=$4
+Exec=$bin %U
+Icon=$5
+Terminal=false
+Categories=$6
+StartupWMClass=$exe
+StartupNotify=true
+EOT
+}
+for d in "$LIVE"/config/packages.chroot/*.deb; do
+    [ -e "$WORK/debs/$(basename "$d")" ] && continue
+    pkg="$(dpkg-deb -f "$d" Package)"
+    case "$pkg" in
+        lareon-desktop) exe=lareon; name="Lareon"; comment="Your Lareon apps in one place"; icon=lareon; cats="Network;Office;" ;;
+        ember)          exe=ember;  name="Ember";  comment="The Lareon web browser";        icon=lareon-ember; cats="Network;WebBrowser;" ;;
+        *) continue ;;
+    esac
+    tmp="$(mktemp -d)"
+    dpkg-deb -R "$d" "$tmp"
+    if write_entry "$tmp" "$exe" "$name" "$comment" "$icon" "$cats"; then
+        dpkg-deb --root-owner-group -Zxz -b "$tmp" "$d.new" >/dev/null && mv "$d.new" "$d"
+        echo "$pkg: menu entry $exe.desktop (icon $icon)"
+    fi
+    rm -rf "$tmp"
+done
+
 if ! $have_ember; then
     warn "no Ember .deb, so adding firefox-esr so the image still has a browser"
     EXTRA_PKGS+=(firefox-esr)
+    # the dock still has a browser in Ember's place
+    mkdir -p "$LIVE/config/includes.chroot/usr/share/applications"
+    cat > "$LIVE/config/includes.chroot/usr/share/applications/ember.desktop" <<'EOT'
+[Desktop Entry]
+Type=Application
+Name=Web Browser
+Exec=firefox-esr %u
+Icon=web-browser
+Terminal=false
+Categories=Network;WebBrowser;
+EOT
 fi
 
 # ------------------------------------------------------------ 5. package names

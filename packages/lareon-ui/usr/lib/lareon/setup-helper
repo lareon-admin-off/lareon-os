@@ -95,7 +95,17 @@ def split_terse(line):
     return out
 
 
+def ensure_network_manager():
+    st = run("systemctl", "is-active", "NetworkManager", check=False)
+    if st.stdout.strip() != "active":
+        run("systemctl", "enable", "--now", "NetworkManager", check=False)
+        run("nmcli", "networking", "on", check=False)
+        run("nmcli", "radio", "wifi", "on", check=False)
+        run("sleep", "2", check=False)
+
+
 def wifi_list():
+    ensure_network_manager()
     r = run("nmcli", "-t", "-e", "yes", "-f", "IN-USE,SSID,SIGNAL,SECURITY",
             "device", "wifi", "list", "--rescan", "yes", check=False)
     nets, connected = {}, None
@@ -237,8 +247,11 @@ def light_theme(user):
     except OSError:
         colors = ""
     # The colour scheme file's own [General] already names LareonLight.
-    kdeglobals = colors + "\n[KDE]\nLookAndFeelPackage=org.lareon.desktop.light\n\n[Icons]\nTheme=breeze\n"
+    kdeglobals = colors + "\n[KDE]\nLookAndFeelPackage=org.lareon.desktop.light\n\n[Icons]\nTheme=LareonLight\n"
     user_config(user, ".config/kdeglobals", kdeglobals)
+    user_config(user, ".config/kwinrc",
+                "[org.kde.kdecoration2]\nlibrary=org.kde.kwin.aurorae\ntheme=__aurorae__svg__LareonLight\n"
+                "ButtonsOnLeft=M\nButtonsOnRight=IAX\n")
     user_config(user, ".config/ksplashrc", "[KSplash]\nEngine=KSplashQML\nTheme=org.lareon.desktop.light\n")
 
 
