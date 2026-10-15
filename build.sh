@@ -420,6 +420,7 @@ LIST="$LIVE/config/package-lists/lareon.list.chroot"
 : > "$LIST"
 missing=()
 while read -r p; do
+    [ -n "$p" ] || continue
     apt-cache show "$p" >/dev/null 2>&1 || missing+=("$p")
     echo "$p" >> "$LIST"
 done < <(grep -hvE '^\s*(#|$)' "$ROOT/packagelists/required.list"; printf '%s\n' "${EXTRA_PKGS[@]+"${EXTRA_PKGS[@]}"}")
