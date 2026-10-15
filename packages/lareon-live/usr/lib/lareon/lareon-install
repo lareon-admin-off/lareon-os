@@ -277,6 +277,20 @@ def install(cfg):
 
     # 6. start-up files
     progress(88, "Setting up Lareon OS", "Building the start-up files")
+    # Include every common drive driver. The default ("dep") picks drivers by
+    # looking at what the *running* system boots from (the install disc), which
+    # leaves out the driver for the new drive and stops start-up at "(initramfs)".
+    conf = TARGET + "/etc/initramfs-tools/initramfs.conf"
+    if os.path.exists(conf):
+        text = open(conf).read()
+        if re.search(r"^MODULES=", text, re.M):
+            text = re.sub(r"^MODULES=.*$", "MODULES=most", text, flags=re.M)
+        else:
+            text += "\nMODULES=most\n"
+        open(conf, "w").write(text)
+    os.makedirs(TARGET + "/etc/initramfs-tools/conf.d", exist_ok=True)
+    with open(TARGET + "/etc/initramfs-tools/conf.d/resume", "w") as f:
+        f.write("RESUME=none\n")
     chroot("update-initramfs", "-c", "-k", "all")
 
     progress(94, "Installing the boot loader")
@@ -299,6 +313,9 @@ def install(cfg):
     else:
         chroot("grub-install", "--target=i386-pc", "--recheck", disk)
     chroot("update-grub")
+    cfg = TARGET + "/boot/grub/grub.cfg"
+    if not os.path.exists(cfg) or root_uuid not in open(cfg).read():
+        raise Failed("The boot menu doesn't point at the new drive (see the log).")
 
     # 7. done
     progress(98, "Finishing")
