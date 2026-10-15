@@ -118,7 +118,7 @@ def main():
     })
     g["WM"]["activeFont"] = "Geist,10,-1,5,57,0,0,0,0,0"  # Medium
     # Snappier animations, and Ember as the browser.
-    g["KDE"].update({"LookAndFeelPackage": "org.lareon.desktop", "widgetStyle": "Breeze",
+    g["KDE"].update({"LookAndFeelPackage": "org.lareon.desktop", "widgetStyle": "kvantum",
                      "AnimationDurationFactor": "0.5"})
     g["General"]["BrowserApplication"] = "ember.desktop"
     g["Icons"] = {"Theme": "Lareon"}

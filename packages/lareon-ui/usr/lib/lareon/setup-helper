@@ -247,8 +247,9 @@ def light_theme(user):
     except OSError:
         colors = ""
     # The colour scheme file's own [General] already names LareonLight.
-    kdeglobals = colors + "\n[KDE]\nLookAndFeelPackage=org.lareon.desktop.light\n\n[Icons]\nTheme=LareonLight\n"
+    kdeglobals = colors + "\n[KDE]\nLookAndFeelPackage=org.lareon.desktop.light\nwidgetStyle=kvantum\n\n[Icons]\nTheme=LareonLight\n"
     user_config(user, ".config/kdeglobals", kdeglobals)
+    user_config(user, ".config/Kvantum/kvantum.kvconfig", "[General]\ntheme=LareonLight\n")
     user_config(user, ".config/kwinrc",
                 "[org.kde.kdecoration2]\nlibrary=org.kde.kwin.aurorae\ntheme=__aurorae__svg__LareonLight\n"
                 "ButtonsOnLeft=M\nButtonsOnRight=IAX\n")

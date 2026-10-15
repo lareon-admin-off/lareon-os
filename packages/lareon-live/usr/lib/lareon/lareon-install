@@ -302,6 +302,21 @@ def install(cfg):
         else:
             text += "\nGRUB_DISTRIBUTOR='Lareon OS'\n"
         open(grub_default, "w").write(text)
+    # In a virtual machine the graphics card is often one the Linux driver can't
+    # use (VirtualBox/UTM "VMSVGA": "vmwgfx seems to be running on an unsupported
+    # hypervisor"), which leaves a black screen. The install disc starts with
+    # "nomodeset" for the same reason; do the same on the new system when this is
+    # a virtual machine. Real computers are not affected.
+    virt = run("systemd-detect-virt", "--vm", check=False, quiet=True)
+    if virt.returncode == 0 and virt.stdout.strip() not in ("", "none") and os.path.exists(grub_default):
+        text = open(grub_default).read()
+        m = re.search(r'^GRUB_CMDLINE_LINUX_DEFAULT="(.*)"$', text, re.M)
+        if m and "nomodeset" not in m.group(1):
+            text = text.replace(m.group(0), 'GRUB_CMDLINE_LINUX_DEFAULT="%s nomodeset"' % m.group(1).strip())
+        elif not m:
+            text += '\nGRUB_CMDLINE_LINUX_DEFAULT="quiet splash nomodeset"\n'
+        open(grub_default, "w").write(text)
+        log("virtual machine (%s): added nomodeset" % virt.stdout.strip())
     if uefi:
         ok1 = chroot("grub-install", "--target=x86_64-efi", "--efi-directory=/boot/efi",
                      "--bootloader-id=Lareon", "--recheck", check=False).returncode == 0
@@ -322,6 +337,37 @@ def install(cfg):
     run("sync", check=False)
     unmount_all()
     progress(100, "Done", state="done")
+
+
+def restart_now():
+    """Restart without waiting for the live system to shut down cleanly.
+
+    The target drive is already synced and unmounted, and the live system has
+    nothing to save. A normal shutdown can hang on a blank screen in virtual
+    machines, so go straight to the reset and try harder ways if it doesn't
+    happen at once."""
+    try:
+        os.sync()
+    except OSError:
+        pass
+    run("systemctl", "--force", "--force", "reboot", check=False)
+    time.sleep(3)
+    for attempt in (
+        lambda: run("reboot", "-f", check=False),
+        lambda: open("/proc/sysrq-trigger", "w").write("b"),
+    ):
+        try:
+            attempt()
+        except Exception:  # noqa: BLE001
+            pass
+        time.sleep(2)
+    try:  # last resort: the PC reset port that virtual machines and most PCs have
+        fd = os.open("/dev/port", os.O_WRONLY)
+        os.lseek(fd, 0xCF9, os.SEEK_SET)
+        os.write(fd, b"\x02")
+        os.write(fd, b"\x06")
+    except OSError:
+        pass
 
 
 def main():
@@ -351,7 +397,7 @@ def main():
             progress(None, "Stopped", state="failed", message=msg)
             return 1
     elif cmd == "reboot":
-        run("systemctl", "reboot", check=False)
+        restart_now()
     else:
         print(__doc__)
         return 2

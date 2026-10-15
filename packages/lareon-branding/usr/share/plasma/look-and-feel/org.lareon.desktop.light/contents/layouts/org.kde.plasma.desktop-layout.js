@@ -74,19 +74,3 @@ for (var d = 0; d < desktops.length; d++) {
     desktops[d].writeConfig("Image", "file:///var/lib/lareon/timeofday/current.png")
 }
 
-// A large clock on the desktop itself, the first thing you see
-lareonTry(function () {
-    var ds = desktopsForActivity(currentActivity())
-    var big = ds[0].addWidget("org.kde.plasma.digitalclock", 90, 70, 460, 190)
-    big.currentConfigGroup = ["Appearance"]
-    big.writeConfig("autoFontAndSize", "false")
-    big.writeConfig("fontFamily", "Geist")
-    big.writeConfig("fontSize", "64")
-    big.writeConfig("fontWeight", "500")
-    big.writeConfig("showDate", "true")
-    big.writeConfig("dateDisplayFormat", "BesideTime")
-    big.writeConfig("dateFormat", "custom")
-    big.writeConfig("customDateFormat", "dddd d MMMM")
-    big.writeConfig("use24hFormat", "2")
-    big.writeConfig("showSeconds", "Never")
-})

@@ -43,3 +43,7 @@ papirus-icon-theme
 grub-efi-amd64-signed
 shim-signed
 mokutil
+
+# Widget style (Kvantum, recoloured as Lareon)
+qt6-style-kvantum
+qt5-style-kvantum

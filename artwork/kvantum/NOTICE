@@ -1,0 +1,4 @@
+KvFlat.* and KvFlatLight.* are the flat themes from Kvantum
+(https://github.com/tsujan/Kvantum, by Tsu Jan), licensed GPL-2.0-or-later.
+make_kvantum.py recolours them with the Lareon palette to make the Lareon
+and LareonLight widget styles.

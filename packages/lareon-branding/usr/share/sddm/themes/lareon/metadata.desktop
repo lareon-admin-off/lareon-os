@@ -1,0 +1,13 @@
+[SddmGreeterTheme]
+Name=Lareon
+Description=The Lareon sign-in screen
+Author=Lareon
+Type=sddm-theme
+Version=1.0
+Website=https://lareon.org
+Screenshot=background.png
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=lareon
+Theme-API=2.0
+QtVersion=6

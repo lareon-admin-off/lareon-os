@@ -274,6 +274,63 @@ for a in assets:
         warn "$repo has no amd64 .deb in its latest release; it won't be preinstalled"
     fi
 done
+# Ember's releases carry an AppImage. If there is no Ember .deb, unpack that
+# AppImage into /opt/ember so the image still gets the real Ember.
+if ! $have_ember; then
+    say "No Ember .deb: looking for its AppImage"
+    auth=()
+    [ -n "${LAREON_RELEASES_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $LAREON_RELEASES_TOKEN")
+    json="$(curl -fsSL "${auth[@]}" "https://api.github.com/repos/lareon-admin-off/ember/releases/latest" 2>/dev/null || true)"
+    url="$(printf '%s' "$json" | python3 -c '
+import json, sys
+try:
+    assets = json.load(sys.stdin).get("assets", [])
+except Exception:
+    assets = []
+for a in assets:
+    n = a["name"].lower()
+    if n.endswith(".appimage") and "arm" not in n and "aarch" not in n:
+        print(a["browser_download_url"]); break
+' || true)"
+    if [ -n "$url" ]; then
+        tmp="$(mktemp -d)"
+        if curl -fsSL "${auth[@]}" -H "Accept: application/octet-stream" -o "$tmp/Ember.AppImage" "$url" \
+           && chmod +x "$tmp/Ember.AppImage" \
+           && ( cd "$tmp" && ./Ember.AppImage --appimage-extract >/dev/null 2>&1 ) \
+           && [ -x "$tmp/squashfs-root/AppRun" ]; then
+            CA="$LIVE/config/includes.chroot_after_packages"
+            mkdir -p "$CA/opt" "$CA/usr/bin" "$CA/usr/share/applications"
+            rm -rf "$CA/opt/ember"; mv "$tmp/squashfs-root" "$CA/opt/ember"
+            chmod -R a+rX "$CA/opt/ember"
+            [ -f "$CA/opt/ember/chrome-sandbox" ] && chmod 4755 "$CA/opt/ember/chrome-sandbox"
+            cat > "$CA/usr/bin/ember" <<'EOT'
+#!/bin/sh
+exec /opt/ember/AppRun "$@"
+EOT
+            chmod 755 "$CA/usr/bin/ember"
+            cat > "$CA/usr/share/applications/ember.desktop" <<'EOT'
+[Desktop Entry]
+Type=Application
+Name=Ember
+Comment=The Lareon web browser
+Exec=/usr/bin/ember %U
+Icon=lareon-ember
+Terminal=false
+Categories=Network;WebBrowser;
+StartupWMClass=ember
+StartupNotify=true
+EOT
+            have_ember=true
+            echo "Ember: unpacked from $url"
+        else
+            warn "could not unpack the Ember AppImage"
+        fi
+        rm -rf "$tmp"
+    else
+        warn "Ember has no AppImage in its latest release"
+    fi
+fi
+
 # An app package must not ship a file one of our packages already owns (for
 # example the Lareon icon): dpkg refuses to install it and the build stops.
 # Our copy wins; the clashing files are taken out of the app package.
