@@ -2,7 +2,7 @@ Package: lareon-live
 Version: @VERSION@
 Architecture: all
 Maintainer: Lareon <help@lareon.org>
-Depends: lareon-ui (= @VERSION@), lareon-branding (= @VERSION@), calamares, calamares-settings-debian, python3-yaml, kwin-wayland, sudo
+Depends: lareon-ui (= @VERSION@), lareon-branding (= @VERSION@), calamares, calamares-settings-debian, python3-yaml, python3, kwin-wayland, sudo, util-linux, parted, squashfs-tools, dosfstools, e2fsprogs, grub-common
 Section: admin
 Priority: optional
 Homepage: https://lareon.org/

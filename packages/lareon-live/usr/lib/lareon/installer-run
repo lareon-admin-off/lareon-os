@@ -4,6 +4,15 @@
 # When installing works, the installer restarts the computer itself.
 LOG=/tmp/lareon-install.log
 
+# The Lareon installer (lareon-ui install + lareon-install). It ends with the
+# computer restarting (exit 0) or the person closing it (exit 2).
+# Create /etc/lareon/use-calamares to use the old Calamares installer instead.
+if [ -x /usr/lib/lareon/lareon-install ] && [ ! -e /etc/lareon/use-calamares ]; then
+    export QT_QUICK_CONTROLS_STYLE=Basic QT_QUICK_BACKEND=software
+    exec lareon-ui install
+fi
+
+
 # A failed or closed install leaves the target drive mounted, and the
 # installer then refuses to erase it (it only offers manual partitioning).
 # Let go of everything it mounted before each start.

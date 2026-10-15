@@ -42,6 +42,13 @@ qt_add_qml_module(lareon-ui
         PagePrivacy.qml
         PageDone.qml
         InstallFailed.qml
+        InstallFlow.qml
+        InstLanguage.qml
+        InstKeyboard.qml
+        InstDrive.qml
+        InstProgress.qml
+        InstDone.qml
+        InstFailedPanel.qml
         CrashDialog.qml
 )
 

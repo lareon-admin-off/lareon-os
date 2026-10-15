@@ -11,17 +11,45 @@ Window {
     visibility: Sys.windowed ? Window.Windowed : Window.FullScreen
     title: Sys.mode === "crash"
            ? qsTr("%1 closed unexpectedly").arg(Sys.args.name || qsTr("An app"))
-           : qsTr("Lareon OS")
+           : Sys.mode === "install" ? qsTr("Install Lareon OS")
+     : qsTr("Lareon OS")
 
     Loader {
         id: loader
         anchors.fill: parent
-        sourceComponent: Sys.mode === "install-failed" ? failedScreen
+        sourceComponent: Sys.mode === "install" ? installScreen
+                       : Sys.mode === "install-failed" ? failedScreen
                        : Sys.mode === "crash" ? crashScreen
                        : setupScreen
     }
 
-    Component { id: setupScreen; SetupFlow {} }
+    // The setup screens are laid out for a 1280x800 screen. On a smaller one
+    // (a VM window, a small laptop) the whole canvas shrinks to fit instead of
+    // being cut off; on a bigger one it simply has more room.
+    Component {
+        id: setupScreen
+        Item {
+            readonly property real fit: Math.min(1, width / 1280, height / 800)
+            SetupFlow {
+                width: parent.width / parent.fit
+                height: parent.height / parent.fit
+                scale: parent.fit
+                transformOrigin: Item.TopLeft
+            }
+        }
+    }
+    Component {
+        id: installScreen
+        Item {
+            readonly property real fit: Math.min(1, width / 1280, height / 800)
+            InstallFlow {
+                width: parent.width / parent.fit
+                height: parent.height / parent.fit
+                scale: parent.fit
+                transformOrigin: Item.TopLeft
+            }
+        }
+    }
     Component { id: failedScreen; InstallFailed {} }
     Component { id: crashScreen; CrashDialog {} }
 }

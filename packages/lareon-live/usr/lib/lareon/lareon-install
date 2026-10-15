@@ -1,0 +1,345 @@
+#!/usr/bin/python3
+"""Lareon OS installer backend. Run as root by the installer screen (lareon-ui install).
+
+  lareon-install disks            list drives that can take Lareon OS (JSON on stdout)
+  lareon-install install          install; settings as JSON on stdin:
+                                  {"disk": "/dev/sda", "language": "en", "keyboard": "us"}
+  lareon-install reboot           restart the computer
+
+While installing it writes its progress to /tmp/lareon-install-progress.json
+(the installer screen reads it) and everything it does to /tmp/lareon-install.log.
+
+The drive is erased and gets: UEFI computers - a 512 MiB EFI partition and one
+ext4 partition; older BIOS computers - a 1 MiB boot partition and one ext4
+partition. Lareon OS is copied from the live image, then boot loader, keyboard,
+language and first-start setup (where the account is made) are prepared.
+"""
+import glob
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+TARGET = "/mnt/lareon-target"
+PROGRESS = "/tmp/lareon-install-progress.json"
+LOG = "/tmp/lareon-install.log"
+MIN_GB = 16
+EFI_GUID = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
+LINUX_GUID = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+BIOS_GUID = "21686148-6449-6E6F-744E-656564454649"
+
+LOCALES = {"en": "en_US.UTF-8", "es": "es_ES.UTF-8", "fr": "fr_FR.UTF-8", "de": "de_DE.UTF-8",
+           "pt": "pt_PT.UTF-8", "it": "it_IT.UTF-8", "ru": "ru_RU.UTF-8", "tr": "tr_TR.UTF-8",
+           "sv": "sv_SE.UTF-8", "ja": "ja_JP.UTF-8", "ko": "ko_KR.UTF-8", "zh": "zh_CN.UTF-8",
+           "hi": "hi_IN.UTF-8", "ar": "ar_SA.UTF-8", "fa": "fa_IR.UTF-8", "sw": "sw_TZ.UTF-8",
+           "ary": "ar_MA.UTF-8"}
+
+
+class Failed(Exception):
+    pass
+
+
+def log(text):
+    with open(LOG, "a") as f:
+        f.write(text.rstrip("\n") + "\n")
+
+
+def progress(percent=None, step=None, detail="", state="running", message=""):
+    data = {"state": state, "percent": percent, "step": step, "detail": detail, "message": message}
+    tmp = PROGRESS + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, PROGRESS)
+
+
+def run(*cmd, check=True, input=None, quiet=False):
+    log("$ " + " ".join(cmd))
+    r = subprocess.run(cmd, input=input, capture_output=True, text=True)
+    if r.stdout.strip() and not quiet:
+        log(r.stdout)
+    if r.stderr.strip():
+        log(r.stderr)
+    if check and r.returncode != 0:
+        raise Failed("%s failed (%d): %s" % (cmd[0], r.returncode, (r.stderr or r.stdout).strip()[-300:]))
+    return r
+
+
+def chroot(*cmd, check=True):
+    return run("chroot", TARGET, *cmd, check=check)
+
+
+# --------------------------------------------------------------------- disks
+def live_disk():
+    """The drive Lareon OS was started from (never offered as a target)."""
+    for mount in ("/run/live/medium", "/lib/live/mount/medium", "/cdrom"):
+        src = run("findmnt", "-no", "SOURCE", mount, check=False, quiet=True).stdout.strip()
+        if src.startswith("/dev/"):
+            parent = run("lsblk", "-no", "PKNAME", src, check=False, quiet=True).stdout.strip().split("\n")[0]
+            return "/dev/" + parent if parent else src
+    return ""
+
+
+def disks():
+    r = run("lsblk", "-J", "-b", "-d", "-o", "NAME,SIZE,MODEL,TYPE,RO,TRAN,PATH", check=False, quiet=True)
+    try:
+        devs = json.loads(r.stdout)["blockdevices"]
+    except (ValueError, KeyError):
+        devs = []
+    skip = live_disk()
+    out = []
+    for d in devs:
+        name = d.get("name", "")
+        if d.get("type") != "disk" or re.match(r"(loop|ram|zram|sr|fd)", name):
+            continue
+        if d.get("ro") in (True, 1, "1"):
+            continue
+        path = d.get("path") or "/dev/" + name
+        if path == skip:
+            continue
+        gb = int(d.get("size") or 0) / 1e9
+        ok = gb >= MIN_GB
+        tran = (d.get("tran") or "").upper()
+        kind = "NVMe" if name.startswith("nvme") else (tran or "Drive")
+        out.append({"path": path, "label": (d.get("model") or "").strip(), "gb": round(gb, 1),
+                    "kind": kind, "ok": ok,
+                    "reason": "" if ok else "Too small (needs %d GB)" % MIN_GB})
+    print(json.dumps({"disks": out}))
+
+
+# ------------------------------------------------------------------- install
+def part(disk, n):
+    return disk + ("p" if disk[-1].isdigit() else "") + str(n)
+
+
+def find_squashfs():
+    for pat in ("/run/live/medium/live/filesystem.squashfs", "/lib/live/mount/medium/live/filesystem.squashfs",
+                "/run/live/medium/live/*.squashfs", "/lib/live/mount/medium/live/*.squashfs",
+                "/cdrom/live/filesystem.squashfs"):
+        for f in sorted(glob.glob(pat)):
+            return f
+    raise Failed("Couldn't find the Lareon OS files on the install disc.")
+
+
+def unmount_all():
+    r = run("awk", "{print $2}", "/proc/mounts", check=False, quiet=True)
+    mounts = [m for m in r.stdout.split() if m == TARGET or m.startswith(TARGET + "/")]
+    for m in sorted(mounts, key=len, reverse=True):
+        run("umount", "-l", m, check=False, quiet=True)
+
+
+def copy_system(squash):
+    """Unpack the live image into the new drive, reporting percentages."""
+    log("$ unsquashfs -f -d %s -percentage %s" % (TARGET, squash))
+    p = subprocess.Popen(["unsquashfs", "-f", "-d", TARGET, "-percentage", squash],
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=0)
+    buf = ""
+    last = -1
+    tail = []
+    while True:
+        chunk = p.stdout.read(64)
+        if not chunk:
+            break
+        buf += chunk
+        parts = re.split(r"[\r\n]+", buf)
+        buf = parts.pop()
+        for line in parts:
+            line = line.strip()
+            if not line:
+                continue
+            m = re.match(r"^(\d{1,3})\s*%?$", line)
+            if m:
+                pct = min(100, int(m.group(1)))
+                if pct != last:
+                    last = pct
+                    progress(6 + pct * 0.76, "Copying Lareon OS to your drive", "%d%%" % pct)
+            else:
+                tail.append(line)
+    code = p.wait()
+    log("\n".join(tail[-20:]))
+    if code != 0:
+        raise Failed("Copying Lareon OS failed (unsquashfs error %d)." % code)
+
+
+def install(cfg):
+    disk = cfg.get("disk", "")
+    lang = cfg.get("language", "en")
+    kb = re.sub(r"[^A-Za-z0-9_,-]", "", cfg.get("keyboard", "us")) or "us"
+    if not re.match(r"^/dev/[A-Za-z0-9/_-]+$", disk) or not os.path.exists(disk):
+        raise Failed("That drive isn't there any more.")
+    if disk == live_disk():
+        raise Failed("That's the drive you started from.")
+    uefi = os.path.isdir("/sys/firmware/efi")
+    log("install on %s, %s, language %s, keyboard %s" % (disk, "UEFI" if uefi else "BIOS", lang, kb))
+
+    squash = find_squashfs()
+
+    # 1. let go of anything left from an earlier try, then partition
+    progress(1, "Preparing the drive")
+    unmount_all()
+    run("swapoff", "-a", check=False)
+    run("sh", "-c", "for d in %s*; do umount -l \"$d\" 2>/dev/null; done; true" % disk, check=False)
+    run("wipefs", "-a", "-f", disk)
+    if uefi:
+        script = "label: gpt\nsize=512MiB, type=%s\ntype=%s\n" % (EFI_GUID, LINUX_GUID)
+        efi_part, root_part = part(disk, 1), part(disk, 2)
+    else:
+        script = "label: gpt\nsize=1MiB, type=%s\ntype=%s\n" % (BIOS_GUID, LINUX_GUID)
+        efi_part, root_part = None, part(disk, 2)
+    run("sfdisk", "--wipe", "always", "--wipe-partitions", "always", disk, input=script)
+    run("partprobe", disk, check=False)
+    run("udevadm", "settle", check=False)
+    for _ in range(30):
+        if os.path.exists(root_part):
+            break
+        time.sleep(0.5)
+    else:
+        raise Failed("The new partitions didn't appear on %s." % disk)
+
+    # 2. file systems
+    progress(3, "Preparing the drive", "Formatting")
+    if efi_part:
+        run("mkfs.fat", "-F", "32", "-n", "LAREON-EFI", efi_part)
+    run("mkfs.ext4", "-F", "-q", "-L", "lareon", root_part)
+
+    os.makedirs(TARGET, exist_ok=True)
+    run("mount", root_part, TARGET)
+    if efi_part:
+        os.makedirs(TARGET + "/boot/efi", exist_ok=True)
+        run("mount", efi_part, TARGET + "/boot/efi")
+
+    # 3. copy the system
+    progress(6, "Copying Lareon OS to your drive")
+    copy_system(squash)
+
+    # 4. settings for the new system
+    progress(83, "Setting up Lareon OS")
+    root_uuid = run("blkid", "-s", "UUID", "-o", "value", root_part).stdout.strip()
+    fstab = ["# /etc/fstab: made by the Lareon OS installer",
+             "UUID=%s / ext4 defaults,noatime 0 1" % root_uuid]
+    if efi_part:
+        efi_uuid = run("blkid", "-s", "UUID", "-o", "value", efi_part).stdout.strip()
+        fstab.append("UUID=%s /boot/efi vfat umask=0077 0 2" % efi_uuid)
+    # a swap file (2 GiB) for drives with room for it
+    st = os.statvfs(TARGET)
+    if st.f_bavail * st.f_frsize > 20 * 2**30:
+        swap = TARGET + "/swapfile"
+        if run("fallocate", "-l", "2G", swap, check=False).returncode == 0:
+            os.chmod(swap, 0o600)
+            if run("mkswap", swap, check=False).returncode == 0:
+                fstab.append("/swapfile none swap sw 0 0")
+    with open(TARGET + "/etc/fstab", "w") as f:
+        f.write("\n".join(fstab) + "\n")
+
+    with open(TARGET + "/etc/hostname", "w") as f:
+        f.write("lareon\n")
+    for f in ("/etc/machine-id", "/var/lib/dbus/machine-id"):
+        try:
+            os.remove(TARGET + f)
+        except OSError:
+            pass
+    open(TARGET + "/etc/machine-id", "w").close()
+
+    with open(TARGET + "/etc/default/keyboard", "w") as f:
+        f.write('XKBMODEL="pc105"\nXKBLAYOUT="%s"\nXKBVARIANT=""\nXKBOPTIONS=""\nBACKSPACE="guess"\n' % kb)
+    os.makedirs(TARGET + "/var/lib/lareon", exist_ok=True)
+    with open(TARGET + "/var/lib/lareon/language", "w") as f:
+        f.write(lang + "\n")
+
+    # 5. the new system's own view of the machine
+    progress(85, "Setting up Lareon OS", "Preparing the new system")
+    for src, dst in (("/dev", "/dev"), ("/proc", "/proc"), ("/sys", "/sys"), ("/run", "/run")):
+        os.makedirs(TARGET + dst, exist_ok=True)
+        run("mount", "--rbind", src, TARGET + dst)
+
+    locale = LOCALES.get(lang, "en_US.UTF-8")
+    if os.path.exists(TARGET + "/etc/locale.gen") and os.path.exists(TARGET + "/usr/sbin/locale-gen"):
+        run("sed", "-i", "-e", "s/^# *%s/%s/" % (re.escape(locale), locale),
+            "-e", "s/^# *en_US.UTF-8/en_US.UTF-8/", TARGET + "/etc/locale.gen", check=False)
+        chroot("locale-gen", check=False)
+        with open(TARGET + "/etc/default/locale", "w") as f:
+            f.write("LANG=%s\n" % locale)
+    else:
+        with open(TARGET + "/etc/default/locale", "w") as f:
+            f.write("LANG=C.UTF-8\n")
+
+    # the installer and the live-only parts don't belong on the installed system
+    chroot("dpkg", "--purge", "--force-depends", "lareon-live", "calamares", "calamares-settings-debian",
+           "live-boot", "live-boot-initramfs-tools", "live-config", "live-config-systemd",
+           "live-tools", check=False)
+    chroot("rm", "-f", "/etc/sudoers.d/lareon-live", "/etc/sddm.conf.d/zz-lareon-live.conf", check=False)
+    chroot("userdel", "-r", "lareon", check=False)
+
+    # first start opens Lareon setup (the account is made there)
+    chroot("/usr/lib/lareon/prepare-first-start")
+
+    # 6. start-up files
+    progress(88, "Setting up Lareon OS", "Building the start-up files")
+    chroot("update-initramfs", "-c", "-k", "all")
+
+    progress(94, "Installing the boot loader")
+    grub_default = TARGET + "/etc/default/grub"
+    if os.path.exists(grub_default):
+        text = open(grub_default).read()
+        if re.search(r"^GRUB_DISTRIBUTOR=", text, re.M):
+            text = re.sub(r"^GRUB_DISTRIBUTOR=.*$", "GRUB_DISTRIBUTOR='Lareon OS'", text, flags=re.M)
+        else:
+            text += "\nGRUB_DISTRIBUTOR='Lareon OS'\n"
+        open(grub_default, "w").write(text)
+    if uefi:
+        ok1 = chroot("grub-install", "--target=x86_64-efi", "--efi-directory=/boot/efi",
+                     "--bootloader-id=Lareon", "--recheck", check=False).returncode == 0
+        # also the fallback path, so firmwares that forget boot entries still start Lareon
+        ok2 = chroot("grub-install", "--target=x86_64-efi", "--efi-directory=/boot/efi",
+                     "--removable", "--no-nvram", check=False).returncode == 0
+        if not (ok1 or ok2):
+            raise Failed("The boot loader couldn't be installed (see the log).")
+    else:
+        chroot("grub-install", "--target=i386-pc", "--recheck", disk)
+    chroot("update-grub")
+
+    # 7. done
+    progress(98, "Finishing")
+    run("sync", check=False)
+    unmount_all()
+    progress(100, "Done", state="done")
+
+
+def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+    if cmd == "disks":
+        disks()
+    elif cmd == "install":
+        try:
+            cfg = json.load(sys.stdin)
+        except ValueError:
+            print("The installer didn't get its settings.", file=sys.stderr)
+            return 2
+        try:
+            os.remove(LOG)
+        except OSError:
+            pass
+        try:
+            progress(0, "Getting ready")
+            install(cfg)
+        except Exception as e:  # noqa: BLE001 - shown to the person, details in the log
+            msg = str(e) if isinstance(e, Failed) else "%s: %s" % (type(e).__name__, e)
+            log("FAILED: " + msg)
+            try:
+                unmount_all()
+            except Exception:  # noqa: BLE001
+                pass
+            progress(None, "Stopped", state="failed", message=msg)
+            return 1
+    elif cmd == "reboot":
+        run("systemctl", "reboot", check=False)
+    else:
+        print(__doc__)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

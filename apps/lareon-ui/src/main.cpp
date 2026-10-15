@@ -1,6 +1,7 @@
 // lareon-ui: the Lareon OS screens that aren't part of Plasma or the installer.
 //
 //   lareon-ui setup                              first-start setup (full screen)
+//   lareon-ui install                            the Lareon OS installer (full screen)
 //   lareon-ui install-failed --set log=FILE      "Lareon OS couldn't be installed"
 //   lareon-ui crash --set name=Files --set exe=/usr/bin/dolphin ...
 //
@@ -53,7 +54,7 @@ int main(int argc, char *argv[])
 
     const QStringList positional = parser.positionalArguments();
     const QString mode = positional.isEmpty() ? QStringLiteral("setup") : positional.first();
-    if (mode != QLatin1String("setup") && mode != QLatin1String("install-failed") && mode != QLatin1String("crash")) {
+    if (mode != QLatin1String("setup") && mode != QLatin1String("install") && mode != QLatin1String("install-failed") && mode != QLatin1String("crash")) {
         fprintf(stderr, "lareon-ui: unknown screen '%s'\n", qPrintable(mode));
         return 2;
     }

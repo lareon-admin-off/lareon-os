@@ -36,6 +36,16 @@ jobs:
             QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui setup --page $p --screenshot shots/setup-$p.png
           done
           QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui install-failed --screenshot shots/install-failed.png
+          # The Lareon installer screens: any QML error stops the build, because
+          # a broken installer would only show up when someone tries to install.
+          for p in language keyboard drive install done failed; do
+            QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui install --page $p --screenshot shots/install-$p.png 2> shots/err-$p.txt || { cat shots/err-$p.txt; exit 1; }
+            cat shots/err-$p.txt
+            if grep -E "ReferenceError|TypeError|is not a type|Cannot assign|Unable to assign|unavailable|SyntaxError|is not installed" shots/err-$p.txt; then
+              echo "QML problem on installer page $p"; exit 1
+            fi
+          done
+          python3 -m py_compile packages/lareon-live/usr/lib/lareon/lareon-install
           QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui crash --set name=Files --screenshot shots/crash.png
           for f in packages/lareon-live/etc/calamares/branding/lareon/*.qml packages/lareon-branding/usr/share/plasma/look-and-feel/*/contents/*/*.qml; do
             /usr/lib/qt6/bin/qmlformat "$f" >/dev/null || { echo "QML syntax error in $f"; exit 1; }

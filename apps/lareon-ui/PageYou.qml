@@ -198,12 +198,7 @@ Item {
                         onActivated: root.setup.timeZone = currentText
                         font.family: Theme.font
                         font.pixelSize: 15
-                        editable: true
-                        // type part of a name ("Boise", "Paris") and press Enter
-                        onAccepted: {
-                            const i = find(editText, Qt.MatchContains)
-                            if (i >= 0) { currentIndex = i; root.setup.timeZone = textAt(i) }
-                        }
+                        // (a plain list: simpler and steadier than an editable box)
                         palette.text: Theme.text
                         palette.buttonText: Theme.text
                         palette.base: Theme.bg

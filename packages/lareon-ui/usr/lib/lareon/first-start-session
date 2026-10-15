@@ -1,11 +1,24 @@
 #!/bin/sh
 # The whole first-start "desktop": KWin running only the Lareon setup screen.
-# Keyboard layout follows what was chosen in the installer.
+# Everything it prints goes to ~/session.log (/var/lib/lareon-setup/session.log)
+# so a crash can be looked at afterwards.
+exec >>"$HOME/session.log" 2>&1
+echo "=== first-start session $(date)"
+
+# Keyboard layout follows what was chosen in the installer (only when it is set,
+# so an empty setting can't leave the session without a usable keymap).
 if [ -r /etc/default/keyboard ]; then
     . /etc/default/keyboard
-    export XKB_DEFAULT_LAYOUT="${XKBLAYOUT:-}" XKB_DEFAULT_VARIANT="${XKBVARIANT:-}" \
-           XKB_DEFAULT_MODEL="${XKBMODEL:-}" XKB_DEFAULT_OPTIONS="${XKBOPTIONS:-}"
+    [ -n "${XKBLAYOUT:-}" ]  && export XKB_DEFAULT_LAYOUT="$XKBLAYOUT"
+    [ -n "${XKBVARIANT:-}" ] && export XKB_DEFAULT_VARIANT="$XKBVARIANT"
+    [ -n "${XKBMODEL:-}" ]   && export XKB_DEFAULT_MODEL="$XKBMODEL"
+    [ -n "${XKBOPTIONS:-}" ] && export XKB_DEFAULT_OPTIONS="$XKBOPTIONS"
 fi
+
+# The setup screen draws itself in software (QT_QUICK_BACKEND=software): it is
+# simple, and it must work on any computer or virtual machine, including ones
+# without a graphics card.
 export QT_QUICK_CONTROLS_STYLE=Basic
-exec kwin_wayland --locale1 --no-lockscreen --no-global-shortcuts \
-     --exit-with-session="/usr/bin/lareon-ui setup"
+
+exec kwin_wayland --no-lockscreen --no-global-shortcuts \
+     --exit-with-session="env QT_QUICK_BACKEND=software /usr/bin/lareon-ui setup"
