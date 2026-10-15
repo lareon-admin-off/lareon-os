@@ -344,8 +344,8 @@ if ! $have_ember; then
     warn "no Ember .deb, so adding firefox-esr so the image still has a browser"
     EXTRA_PKGS+=(firefox-esr)
     # the dock still has a browser in Ember's place
-    mkdir -p "$LIVE/config/includes.chroot/usr/share/applications"
-    cat > "$LIVE/config/includes.chroot/usr/share/applications/ember.desktop" <<'EOT'
+    mkdir -p "$LIVE/config/includes.chroot_after_packages/usr/share/applications"
+    cat > "$LIVE/config/includes.chroot_after_packages/usr/share/applications/ember.desktop" <<'EOT'
 [Desktop Entry]
 Type=Application
 Name=Web Browser
