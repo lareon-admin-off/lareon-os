@@ -1,0 +1,20 @@
+#!/usr/bin/python3
+"""Look for updates. Prints JSON: {"count": N, "packages": [...], "error": ""}.
+Runs as root through pkexec (no password needed to only look)."""
+import json
+import os
+import subprocess
+
+env = dict(os.environ, DEBIAN_FRONTEND="noninteractive", LC_ALL="C")
+out = {"count": 0, "packages": [], "error": ""}
+try:
+    r = subprocess.run(["apt-get", "update", "-q"], env=env, capture_output=True, text=True, timeout=180)
+    if r.returncode != 0:
+        out["error"] = "Couldn't reach the update server. Check your internet connection."
+    s = subprocess.run(["apt-get", "-s", "dist-upgrade"], env=env, capture_output=True, text=True, timeout=120)
+    names = [ln.split()[1] for ln in s.stdout.splitlines() if ln.startswith("Inst ")]
+    out["count"] = len(names)
+    out["packages"] = names[:40]
+except (OSError, subprocess.SubprocessError) as e:
+    out["error"] = "Couldn't check for updates: %s" % e
+print(json.dumps(out))

@@ -47,3 +47,7 @@ mokutil
 # Widget style (Kvantum, recoloured as Lareon)
 qt6-style-kvantum
 qt5-style-kvantum
+
+# Start-up chime player
+pipewire-bin
+pulseaudio-utils

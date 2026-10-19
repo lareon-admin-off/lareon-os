@@ -79,6 +79,21 @@ APP_GLYPHS = {
     "globe": f'<circle cx="32" cy="32" r="15" {W}/><path d="M17 32h30M32 17c-8 8-8 22 0 30M32 17c8 8 8 22 0 30" {W}/>',
     "install": f'<path d="M32 17v20m-8-8l8 8 8-8M19 46h26" {W}/>',
     "bluetooth": f'<path d="M23 25l18 14-9 7V18l9 7-18 14" {W}/>',
+    "update": f'<path d="M45 26a14 14 0 0 0-25-3M19 38a14 14 0 0 0 25 3" {W}/><path d="M20 15v8h8M44 49v-8h-8" {W}/>',
+    "audio": f'<path d="M18 28h7l9-8v24l-9-8h-7z" {W}/><path d="M40 26a9 9 0 0 1 0 12M45 21a16 16 0 0 1 0 22" {W}/>',
+    "video": f'<rect x="15" y="22" width="25" height="20" rx="4" {W}/><path d="M40 29l9-5v16l-9-5" {W}/>',
+    "pdf": f'<path d="M22 16h14l8 8v24H22z" {W}/><path d="M36 16v8h8M27 38c4-8 6-8 5 0s6 0 6-2" {W}/>',
+    "code": f'<path d="M26 22l-10 10 10 10M38 22l10 10-10 10M34 19l-4 26" {W}/>',
+    "disk": f'<rect x="15" y="24" width="34" height="18" rx="5" {W}/><path d="M22 33h2M40 33h2" {W}/>',
+    "usb": f'<path d="M32 46V22M32 22l-5 6M32 22l5 4M32 36l-7-5v-3M32 32l7-4" {W}/><circle cx="32" cy="48" r="2.5" {W}/>',
+    "disc": f'<circle cx="32" cy="32" r="16" {W}/><circle cx="32" cy="32" r="4" {W}/>',
+    "computer": f'<rect x="15" y="19" width="34" height="23" rx="4" {W}/><path d="M25 47h14M32 42v5" {W}/>',
+    "trash": f'<path d="M19 24h26M28 24v-4h8v4M22 24l2 22h16l2-22M28 31v10M36 31v10" {W}/>',
+    "network": f'<path d="M18 30a20 20 0 0 1 28 0M23 36a13 13 0 0 1 18 0" {W}/><circle cx="32" cy="43" r="2" {W}/>',
+    "sheet": f'<rect x="17" y="17" width="30" height="30" rx="4" {W}/><path d="M17 27h30M17 37h30M27 17v30" {W}/>',
+    "slides": f'<rect x="16" y="20" width="32" height="22" rx="4" {W}/><path d="M32 42v6M24 48h16" {W}/>',
+    "font": f'<path d="M20 46l10-26 10 26M24 38h12M44 24v6M41 27h6" {W}/>',
+    "package": f'<path d="M32 16l15 8v16l-15 8-15-8V24zM17 24l15 8 15-8M32 32v16" {W}/>',
 }
 
 APPS = {  # icon name -> (glyph, gradient)
@@ -112,8 +127,33 @@ APPS = {  # icon name -> (glyph, gradient)
     "web-browser": ("globe", "ember"),
     "lareon-install": ("install", "ember"),
     "org.kde.bluedevil": ("bluetooth", "dusk"),
+    "lareon-updates": ("update", None),
+    "system-software-update": ("update", None),
+    "org.kde.discover.notifier": ("update", None),
+    "preferences-system-network": ("network", None),
+    "org.kde.plasma.networkmanagement": ("network", None),
     "preferences-system-bluetooth": ("bluetooth", "dusk"),
 }
+
+
+# Other kinds of icons, same family
+MIMES = {
+    "text-x-generic": "text", "text-plain": "text", "application-pdf": "pdf",
+    "image-x-generic": "picture", "audio-x-generic": "audio", "video-x-generic": "video",
+    "application-zip": "archive", "application-x-compressed-tar": "archive", "application-x-archive": "archive",
+    "application-x-generic": "document", "application-octet-stream": "document", "unknown": "document",
+    "text-x-script": "code", "text-x-python": "code", "text-html": "code", "text-x-csrc": "code",
+    "application-json": "code", "application-x-shellscript": "code",
+    "x-office-document": "document", "x-office-spreadsheet": "sheet", "x-office-presentation": "slides",
+    "application-x-font-ttf": "font", "font-x-generic": "font", "application-vnd.debian.binary-package": "package",
+    "application-x-deb": "package", "application-x-executable": "package",
+}
+DEVICES = {
+    "drive-harddisk": "disk", "drive-removable-media": "usb", "drive-removable-media-usb": "usb",
+    "drive-optical": "disc", "media-optical": "disc", "computer": "computer", "computer-laptop": "computer",
+    "network-wired": "network", "network-workgroup": "network",
+}
+PLACES_EXTRA = {"user-trash": "trash", "user-trash-full": "trash", "folder-network": "network"}
 
 
 def app_icon(glyph, grad=None):
@@ -143,11 +183,19 @@ def main(root):
         for name, (g, grad) in APPS.items():
             with open(os.path.join(ap, name + ".svg"), "w") as f:
                 f.write(app_icon(g, grad))
+        for sub, table in (("mimetypes", MIMES), ("devices", DEVICES), ("places", PLACES_EXTRA)):
+            dd = os.path.join(d, "scalable", sub)
+            os.makedirs(dd, exist_ok=True)
+            for name, g in table.items():
+                with open(os.path.join(dd, name + ".svg"), "w") as f:
+                    f.write(app_icon(g))
         with open(os.path.join(d, "index.theme"), "w") as f:
             f.write(f"[Icon Theme]\nName={theme}\nComment=Lareon folders and app icons on top of Papirus\n"
-                    f"Inherits={parent},breeze-dark,breeze,hicolor\nDirectories=scalable/places,scalable/apps\n\n"
+                    f"Inherits={parent},breeze-dark,breeze,hicolor\nDirectories=scalable/places,scalable/apps,scalable/mimetypes,scalable/devices\n\n"
                     "[scalable/places]\nSize=64\nMinSize=16\nMaxSize=512\nType=Scalable\nContext=Places\n\n"
-                    "[scalable/apps]\nSize=64\nMinSize=16\nMaxSize=512\nType=Scalable\nContext=Applications\n")
+                    "[scalable/apps]\nSize=64\nMinSize=16\nMaxSize=512\nType=Scalable\nContext=Applications\n\n"
+                    "[scalable/mimetypes]\nSize=64\nMinSize=16\nMaxSize=512\nType=Scalable\nContext=MimeTypes\n\n"
+                    "[scalable/devices]\nSize=64\nMinSize=16\nMaxSize=512\nType=Scalable\nContext=Devices\n")
 
 
 if __name__ == "__main__":

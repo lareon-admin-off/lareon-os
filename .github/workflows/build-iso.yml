@@ -45,7 +45,15 @@ jobs:
               echo "QML problem on installer page $p"; exit 1
             fi
           done
-          python3 -m py_compile packages/lareon-live/usr/lib/lareon/lareon-install
+          # Lareon Home (launcher) and Updates: same rule, any QML error stops the build
+          for m in home updates; do
+            QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui $m --screenshot shots/$m.png 2> shots/err-$m.txt || { cat shots/err-$m.txt; exit 1; }
+            cat shots/err-$m.txt
+            if grep -E "ReferenceError|TypeError|is not a type|Cannot assign|Unable to assign|unavailable|SyntaxError|is not installed" shots/err-$m.txt; then
+              echo "QML problem on the $m screen"; exit 1
+            fi
+          done
+          python3 -m py_compile packages/lareon-live/usr/lib/lareon/lareon-install packages/lareon-ui/usr/lib/lareon/lareon-apps packages/lareon-ui/usr/lib/lareon/lareon-update-check packages/lareon-ui/usr/lib/lareon/lareon-update-install
           QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui crash --set name=Files --screenshot shots/crash.png
           for f in packages/lareon-branding/usr/share/sddm/themes/lareon/Main.qml packages/lareon-live/etc/calamares/branding/lareon/*.qml packages/lareon-branding/usr/share/plasma/look-and-feel/*/contents/*/*.qml; do
             /usr/lib/qt6/bin/qmlformat "$f" >/dev/null || { echo "QML syntax error in $f"; exit 1; }

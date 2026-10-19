@@ -1,0 +1,81 @@
+#!/usr/bin/python3
+"""List the apps for the Lareon launcher as JSON:
+[{"id", "name", "comment", "icon" (file path or ""), "path" (.desktop file)}]"""
+import configparser
+import glob
+import json
+import os
+import sys
+
+DIRS = ["/usr/share/applications", "/var/lib/flatpak/exports/share/applications",
+        os.path.expanduser("~/.local/share/applications"),
+        os.path.expanduser("~/.local/share/flatpak/exports/share/applications")]
+THEMES = ["Lareon", "LareonLight", "Papirus-Dark", "Papirus", "hicolor", "breeze-dark", "breeze"]
+HIDE = {"lareon-home.desktop", "lareon-ui.desktop", "lareon-install.desktop"}
+
+
+def index_icons():
+    best = {}
+
+    def score(path):
+        if "/scalable/" in path or path.endswith(".svg"):
+            return 10000
+        for part in path.split("/"):
+            if "x" in part and part.split("x")[0].isdigit():
+                return int(part.split("x")[0])
+        return 1
+
+    for rank, theme in enumerate(THEMES):
+        base = "/usr/share/icons/" + theme
+        for root, _dirs, files in os.walk(base):
+            if "/apps" not in root + "/":
+                continue
+            for f in files:
+                stem, ext = os.path.splitext(f)
+                if ext not in (".svg", ".png"):
+                    continue
+                p = os.path.join(root, f)
+                key = (-rank, score(p))
+                if stem not in best or key > best[stem][0]:
+                    best[stem] = (key, p)
+    for p in glob.glob("/usr/share/pixmaps/*"):
+        stem, ext = os.path.splitext(os.path.basename(p))
+        if ext in (".svg", ".png", ".xpm") and stem not in best:
+            best[stem] = ((-99, 0), p)
+    return {k: v[1] for k, v in best.items()}
+
+
+def main():
+    icons = index_icons()
+    apps = {}
+    for d in DIRS:
+        for path in sorted(glob.glob(d + "/*.desktop")):
+            app_id = os.path.basename(path)
+            if app_id in HIDE:
+                continue
+            cp = configparser.RawConfigParser(strict=False, interpolation=None)
+            cp.optionxform = str
+            try:
+                cp.read(path, encoding="utf-8")
+                e = cp["Desktop Entry"]
+            except (configparser.Error, KeyError, UnicodeDecodeError, OSError):
+                continue
+            if e.get("Type") != "Application" or e.get("NoDisplay", "").lower() == "true" \
+                    or e.get("Hidden", "").lower() == "true":
+                continue
+            only = e.get("OnlyShowIn")
+            if only and "KDE" not in only.split(";"):
+                continue
+            if "KDE" in e.get("NotShowIn", "").split(";"):
+                continue
+            icon = e.get("Icon", "")
+            if icon and not icon.startswith("/"):
+                icon = icons.get(icon, "")
+            apps[app_id] = {"id": app_id, "name": e.get("Name", app_id[:-8]),
+                            "comment": e.get("Comment", ""), "icon": icon, "path": path}
+    out = sorted(apps.values(), key=lambda a: a["name"].lower())
+    json.dump(out, sys.stdout)
+
+
+if __name__ == "__main__":
+    main()

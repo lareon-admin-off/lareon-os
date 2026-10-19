@@ -1,0 +1,32 @@
+#!/usr/bin/python3
+"""Install all available updates. Progress goes to /var/log/lareon-update.log and
+the result to /var/lib/lareon/update-status ("running", "done" or "failed").
+Runs as root through pkexec (asks for the password)."""
+import os
+import subprocess
+
+LOG = "/var/log/lareon-update.log"
+STATUS = "/var/lib/lareon/update-status"
+os.makedirs(os.path.dirname(STATUS), exist_ok=True)
+
+
+def status(s):
+    with open(STATUS, "w") as f:
+        f.write(s + "\n")
+    os.chmod(STATUS, 0o644)
+
+
+status("running")
+env = dict(os.environ, DEBIAN_FRONTEND="noninteractive", LC_ALL="C")
+with open(LOG, "w") as log:
+    os.chmod(LOG, 0o644)
+    ok = True
+    for cmd in (["apt-get", "update", "-q"],
+                ["apt-get", "-y", "-q", "-o", "Dpkg::Options::=--force-confold", "dist-upgrade"],
+                ["apt-get", "-y", "-q", "autoremove"]):
+        log.write("$ %s\n" % " ".join(cmd))
+        log.flush()
+        if subprocess.run(cmd, env=env, stdout=log, stderr=subprocess.STDOUT).returncode != 0 and "autoremove" not in cmd:
+            ok = False
+            break
+status("done" if ok else "failed")

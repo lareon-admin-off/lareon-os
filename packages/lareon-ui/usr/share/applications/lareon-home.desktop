@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Apps
+GenericName=Lareon Home
+Comment=Search and open your apps
+Icon=lareon
+Exec=lareon-ui home
+Terminal=false
+Categories=System;
+StartupNotify=false
+X-KDE-GlobalAccel-CommandShortcut=false

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Lareon start-up sound
+Exec=/usr/lib/lareon/play-startup
+OnlyShowIn=KDE;
+NoDisplay=true
+X-KDE-autostart-phase=2

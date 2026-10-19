@@ -1,6 +1,6 @@
 // Lareon OS default desktop.
 //   top:    a slim bar - clock on the left, tray on the right
-//   left:   a floating rail - the Lareon mark (all apps), then Lareon, Ember, Files, ...
+//   left:   a floating rail - the Lareon mark (opens Lareon Home), then Lareon, Ember, Files, ...
 //   behind: the time-of-day wallpaper
 // The stock Plasma panel is loaded first and removed only once the new bars
 // exist, so if anything below fails the desktop still comes up with a panel.
@@ -38,18 +38,11 @@ try {
     lareonTry(function () { dock.lengthMode = "fit" })
     lareonTry(function () { dock.alignment = "center" })
 
-    var grid = dock.addWidget("org.kde.plasma.kickerdash")
-    lareonTry(function () {
-        grid.currentConfigGroup = ["General"]
-        grid.writeConfig("icon", "lareon")
-        grid.writeConfig("useCustomButtonImage", "true")
-        grid.writeConfig("customButtonImage", "lareon")
-    })
     var tasks = dock.addWidget("org.kde.plasma.icontasks")
     lareonTry(function () {
         tasks.currentConfigGroup = ["General"]
         tasks.writeConfig("launchers",
-            "applications:lareon.desktop,applications:ember.desktop," +
+            "applications:lareon-home.desktop,applications:lareon.desktop,applications:ember.desktop," +
             "applications:org.kde.dolphin.desktop,applications:org.kde.discover.desktop," +
             "applications:org.kde.konsole.desktop,applications:systemsettings.desktop")
         tasks.writeConfig("showOnlyCurrentDesktop", "false")

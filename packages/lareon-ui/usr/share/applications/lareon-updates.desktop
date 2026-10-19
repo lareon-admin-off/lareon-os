@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Updates
+Comment=Keep Lareon OS up to date
+Icon=lareon-updates
+Exec=lareon-ui updates
+Terminal=false
+Categories=System;Settings;
+Keywords=update;upgrade;software;

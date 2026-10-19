@@ -1,0 +1,11 @@
+#!/bin/sh
+# Start an app from its .desktop file (used by the Lareon launcher).
+f="$1"
+[ -n "$f" ] || exit 2
+if command -v kioclient >/dev/null 2>&1; then
+    exec kioclient exec "$f"
+fi
+if command -v gio >/dev/null 2>&1; then
+    exec gio launch "$f"
+fi
+exec gtk-launch "$(basename "$f" .desktop)"

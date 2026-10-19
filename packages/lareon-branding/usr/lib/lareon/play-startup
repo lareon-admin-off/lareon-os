@@ -1,0 +1,11 @@
+#!/bin/sh
+# Lareon's start-up chime, once per sign-in. Quiet failure if there's no sound.
+f=/usr/share/sounds/lareon/startup.wav
+[ -r "$f" ] || exit 0
+sleep 2
+if command -v pw-play >/dev/null 2>&1; then
+    exec pw-play --volume 0.6 "$f"
+elif command -v paplay >/dev/null 2>&1; then
+    exec paplay "$f"
+fi
+exit 0

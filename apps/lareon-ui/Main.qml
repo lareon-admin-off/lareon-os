@@ -6,12 +6,16 @@ Window {
     id: win
     visible: true
     color: Theme.bg
-    width: Sys.mode === "crash" ? 560 : 1920
-    height: Sys.mode === "crash" ? Math.max(260, loader.item ? loader.item.implicitHeight : 300) : 1080
-    visibility: Sys.windowed ? Window.Windowed : Window.FullScreen
+    width: Sys.mode === "crash" ? 560 : Sys.mode === "updates" ? 640 : 1920
+    height: Sys.mode === "crash" ? Math.max(260, loader.item ? loader.item.implicitHeight : 300)
+          : Sys.mode === "updates" ? 560 : 1080
+    visibility: Sys.mode === "updates" ? Window.Windowed
+              : Sys.windowed ? Window.Windowed : Window.FullScreen
     title: Sys.mode === "crash"
            ? qsTr("%1 closed unexpectedly").arg(Sys.args.name || qsTr("An app"))
            : Sys.mode === "install" ? qsTr("Install Lareon OS")
+           : Sys.mode === "home" ? qsTr("Lareon Home")
+           : Sys.mode === "updates" ? qsTr("Updates")
      : qsTr("Lareon OS")
 
     Loader {
@@ -20,6 +24,8 @@ Window {
         sourceComponent: Sys.mode === "install" ? installScreen
                        : Sys.mode === "install-failed" ? failedScreen
                        : Sys.mode === "crash" ? crashScreen
+                       : Sys.mode === "home" ? homeScreen
+                       : Sys.mode === "updates" ? updatesScreen
                        : setupScreen
     }
 
@@ -52,4 +58,16 @@ Window {
     }
     Component { id: failedScreen; InstallFailed {} }
     Component { id: crashScreen; CrashDialog {} }
+    Component { id: homeScreen; HomeScreen {} }
+    Component { id: updatesScreen; UpdatesScreen {} }
+
+    // Lareon Home closes when you click away from it
+    property bool wasActive: false
+    onActiveChanged: {
+        if (active) {
+            wasActive = true
+        } else if (wasActive && Sys.mode === "home" && !Sys.windowed) {
+            Sys.quit(0)
+        }
+    }
 }
