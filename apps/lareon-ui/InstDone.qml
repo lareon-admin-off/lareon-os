@@ -20,12 +20,15 @@ Item {
         root.install.helperCall("reboot", undefined, function(code) { })
     }
 
-    // restarts by itself, so nobody has to find the button
+    onVisibleChanged: if (visible) seconds = 15
+
+    // restarts by itself, so nobody has to find the button.
+    // Only counts while this page is the one on screen (all pages exist from the start).
     Timer {
         id: countdown
         interval: 1000
         repeat: true
-        running: !root.restarting
+        running: root.visible && root.StackLayout.isCurrentItem && !root.restarting
         onTriggered: {
             root.seconds -= 1
             if (root.seconds <= 0) {
