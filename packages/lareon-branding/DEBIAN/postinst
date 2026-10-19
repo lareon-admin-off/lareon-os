@@ -18,6 +18,10 @@ if [ "$1" = configure ]; then
     fi
     # Boot menu: tell it each start that finished (see /etc/grub.d/05_lareon)
     systemctl enable lareon-boot-ok.service >/dev/null 2>&1 || true
+    # Sign-in screen: Lareon's, even if an older /etc/sddm.conf names another theme
+    if [ -f /etc/sddm.conf ]; then
+        sed -i '/^Current=/d' /etc/sddm.conf || true
+    fi
     # Network: NetworkManager must be on in the installed system
     systemctl enable NetworkManager.service >/dev/null 2>&1 || true
     if [ -x /usr/sbin/update-grub ] && [ -e /boot/grub/grub.cfg ]; then

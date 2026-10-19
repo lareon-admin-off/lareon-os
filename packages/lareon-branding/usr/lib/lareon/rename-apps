@@ -1,0 +1,71 @@
+#!/usr/bin/python3
+"""Give the KDE apps Lareon names in the menu, dock and launcher.
+
+The original entries stay where the packages put them. A renamed copy goes in
+/usr/local/share/applications, which comes first, so updates never fight it.
+The old name is kept as a search keyword."""
+import os
+import re
+import sys
+
+SRC = "/usr/share/applications"
+DST = "/usr/local/share/applications"
+
+NAMES = {  # desktop file -> (Name, GenericName)
+    "org.kde.dolphin.desktop": ("Files", "File manager"),
+    "org.kde.konsole.desktop": ("Terminal", "Terminal"),
+    "org.kde.gwenview.desktop": ("Photos", "Image viewer"),
+    "org.kde.okular.desktop": ("Documents", "Document viewer"),
+    "org.kde.kwrite.desktop": ("Text Editor", "Text editor"),
+    "org.kde.kcalc.desktop": ("Calculator", "Calculator"),
+    "org.kde.ark.desktop": ("Archives", "Archive manager"),
+    "org.kde.spectacle.desktop": ("Screenshots", "Screenshot tool"),
+    "org.kde.discover.desktop": ("Software", "App store"),
+    "systemsettings.desktop": ("Settings", "System settings"),
+    "org.kde.systemsettings.desktop": ("Settings", "System settings"),
+    "org.kde.kinfocenter.desktop": ("System Info", "System information"),
+    "org.kde.plasma-systemmonitor.desktop": ("Monitor", "System monitor"),
+    "org.kde.plasma.emojier.desktop": ("Emoji", "Emoji selector"),
+    "org.kde.kmenuedit.desktop": ("Menu Editor", "Menu editor"),
+    "org.kde.kfind.desktop": ("Find Files", "File search"),
+    "org.kde.kate.desktop": ("Code Editor", "Text editor"),
+}
+
+
+def main():
+    os.makedirs(DST, exist_ok=True)
+    done = 0
+    for fname, (name, generic) in NAMES.items():
+        src = os.path.join(SRC, fname)
+        if not os.path.isfile(src):
+            continue
+        out, old, keys = [], "", None
+        in_entry = False
+        for line in open(src, encoding="utf-8").read().splitlines():
+            if line.startswith("["):
+                in_entry = line.strip() == "[Desktop Entry]"
+            if in_entry:
+                if re.match(r"Name(\[[^\]]+\])?=", line) or re.match(r"GenericName(\[[^\]]+\])?=", line):
+                    if line.startswith("Name=") and not old:
+                        old = line[5:]
+                    continue                                   # replaced below
+                if line.startswith("Keywords="):
+                    keys = line[9:]
+                    continue
+            out.append(line)
+        res = []
+        for line in out:
+            res.append(line)
+            if line.strip() == "[Desktop Entry]":
+                res.append("Name=" + name)
+                res.append("GenericName=" + generic)
+                kw = ";".join(x for x in [old, keys.rstrip(";") if keys else ""] if x)
+                if kw:
+                    res.append("Keywords=" + kw + ";")
+        open(os.path.join(DST, fname), "w", encoding="utf-8").write("\n".join(res) + "\n")
+        done += 1
+    print("renamed %d apps" % done)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

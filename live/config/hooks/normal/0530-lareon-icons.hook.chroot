@@ -1,0 +1,8 @@
+#!/bin/sh
+# Lareon icons: the Papirus icons recoloured into the Lareon palette. Lareon's
+# own icons (folders, apps, file types) are laid on top by the Lareon theme.
+# Never fail the image build over this: without it the icons are plain Papirus.
+[ -x /usr/lib/lareon/recolor-icons ] || exit 0
+[ -d /usr/share/icons/Papirus-Dark ] && /usr/lib/lareon/recolor-icons /usr/share/icons/Papirus-Dark /usr/share/icons/LareonBase "Lareon Base" || true
+[ -d /usr/share/icons/Papirus-Light ] && /usr/lib/lareon/recolor-icons /usr/share/icons/Papirus-Light /usr/share/icons/LareonBaseLight "Lareon Base Light" || true
+exit 0

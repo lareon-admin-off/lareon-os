@@ -171,7 +171,7 @@ def app_icon(glyph, grad=None):
 
 
 def main(root):
-    for theme, parent in (("Lareon", "Papirus-Dark"), ("LareonLight", "Papirus-Light")):
+    for theme, parent in (("Lareon", "LareonBase,Papirus-Dark"), ("LareonLight", "LareonBaseLight,Papirus-Light")):
         d = os.path.join(root, theme)
         pl = os.path.join(d, "scalable", "places")
         os.makedirs(pl, exist_ok=True)

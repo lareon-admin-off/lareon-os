@@ -1,0 +1,112 @@
+#!/usr/bin/python3
+"""Make Lareon's base icons from an installed icon theme by moving its colours
+into the Lareon palette (orange, magenta, violet).
+
+    recolor-icons /usr/share/icons/Papirus-Dark /usr/share/icons/LareonBase "Lareon Base"
+
+Greys stay grey (they are tinted a little towards violet when dark), so symbolic
+icons keep working on both light and dark. Folders and apps that Lareon draws
+itself are overlaid on top by the Lareon icon theme."""
+import colorsys
+import os
+import re
+import shutil
+import sys
+
+HEX = re.compile(r"#([0-9a-fA-F]{6})\b")
+SHORT = re.compile(r"#([0-9a-fA-F]{3})\b(?![0-9a-fA-F])")
+
+
+def map_hue(h):
+    if h >= 345 or h < 15:
+        return 350.0
+    if h < 75:
+        return 24 + (h - 15) * (14 / 60)
+    if h < 165:
+        return 320 - (h - 75) * (20 / 90)
+    if h < 265:
+        return 285 - (h - 165) * (25 / 100)
+    return h
+
+
+def conv(m):
+    hx = m.group(1)
+    if len(hx) == 3:
+        hx = "".join(c * 2 for c in hx)
+    r, g, b = (int(hx[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    if s < 0.18:
+        if l < 0.35:                       # dark greys lean violet like the Lareon panels
+            h, s = 262 / 360, 0.12
+        else:
+            return m.group(0)
+    else:
+        h = map_hue(h * 360) / 360
+        s = min(1.0, s * 1.05 + 0.02)
+    r, g, b = colorsys.hls_to_rgb(h, l, s)
+    return "#%02x%02x%02x" % (round(r * 255), round(g * 255), round(b * 255))
+
+
+def main(src, dst, name):
+    if not os.path.isdir(src):
+        print("no such theme: " + src)
+        return 1
+    if os.path.exists(dst):
+        shutil.rmtree(dst)
+    os.makedirs(dst)
+    for e in sorted(os.listdir(src)):
+        sp, dp = os.path.join(src, e), os.path.join(dst, e)
+        if os.path.islink(sp):
+            real = os.path.realpath(sp)
+            link = os.readlink(sp)
+            if "/" not in link and link in os.listdir(src):
+                os.symlink(link, dp)                      # points at a folder of this theme: keep as is
+            elif os.path.isdir(real):
+                shutil.copytree(real, dp, symlinks=True)  # shared folder of another theme: copy it in
+            elif os.path.isfile(real):
+                shutil.copy2(real, dp)
+        elif os.path.isdir(sp):
+            shutil.copytree(sp, dp, symlinks=True)
+        else:
+            shutil.copy2(sp, dp)
+    # links that left the theme (to another theme's folder) now point nowhere: copy what they pointed at
+    for root, dirs, files in os.walk(dst):
+        for e in list(dirs) + files:
+            p = os.path.join(root, e)
+            if os.path.islink(p) and not os.path.exists(p):
+                orig = os.path.join(src, os.path.relpath(p, dst))
+                if os.path.islink(orig) and os.path.exists(orig):
+                    real = os.path.realpath(orig)
+                    os.unlink(p)
+                    if os.path.isdir(real):
+                        shutil.copytree(real, p, symlinks=True)
+                    else:
+                        shutil.copy2(real, p)
+    n = 0
+    for root, _dirs, files in os.walk(dst):
+        for f in files:
+            p = os.path.join(root, f)
+            if not f.endswith(".svg") or os.path.islink(p) or f.endswith("-symbolic.svg") or "symbolic" in root:
+                continue
+            try:
+                t = open(p, encoding="utf-8").read()
+            except (OSError, UnicodeDecodeError):
+                continue
+            t2 = SHORT.sub(conv, HEX.sub(conv, t))
+            if t2 != t:
+                open(p, "w", encoding="utf-8").write(t2)
+                n += 1
+    idx = os.path.join(dst, "index.theme")
+    t = open(idx).read()
+    t = re.sub(r"(?m)^Name=.*$", "Name=" + name, t, count=1)
+    t = re.sub(r"(?m)^Comment=.*$", "Comment=Icons recoloured for Lareon OS", t, count=1)
+    open(idx, "w").write(t)
+    print("recoloured %d icons into %s" % (n, dst))
+    return 0
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 4:
+        print(__doc__)
+        sys.exit(2)
+    sys.exit(main(*sys.argv[1:]))

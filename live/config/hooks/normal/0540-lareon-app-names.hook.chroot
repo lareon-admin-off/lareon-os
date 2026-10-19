@@ -1,0 +1,4 @@
+#!/bin/sh
+# Lareon names for the KDE apps in the menu, dock and launcher.
+[ -x /usr/lib/lareon/rename-apps ] && /usr/lib/lareon/rename-apps || true
+exit 0

@@ -229,6 +229,7 @@ fi
 # ------------------------------------------------------------ 3. live-build tree
 cp -a "$ROOT/live" "$WORK/live"
 LIVE="$WORK/live"
+chmod +x "$LIVE"/config/hooks/normal/* 2>/dev/null || true
 find "$LIVE" -name .gitkeep -delete
 # (git doesn't store empty folders, so make the ones live-build expects)
 mkdir -p "$LIVE/config/packages.chroot" "$LIVE/config/package-lists"
@@ -313,7 +314,7 @@ EOT
 Type=Application
 Name=Ember
 Comment=The Lareon web browser
-Exec=/usr/bin/ember %U
+Exec=/usr/bin/ember --ozone-platform-hint=auto --class=ember %U
 Icon=lareon-ember
 Terminal=false
 Categories=Network;WebBrowser;
@@ -372,7 +373,7 @@ write_entry() {  # root  exe  Name  Comment  Icon  Categories
 Type=Application
 Name=$3
 Comment=$4
-Exec=$bin %U
+Exec=$bin --ozone-platform-hint=auto --class=$exe %U
 Icon=$5
 Terminal=false
 Categories=$6
