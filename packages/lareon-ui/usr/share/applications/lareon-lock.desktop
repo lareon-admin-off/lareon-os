@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Lock
+Comment=Show the sign-in screen
+Icon=system-lock-screen
+Exec=/usr/lib/lareon/lock-session
+Terminal=false
+NoDisplay=true
+Categories=System;

@@ -46,11 +46,18 @@ jobs:
             fi
           done
           # Lareon Home (launcher) and Updates: same rule, any QML error stops the build
-          for m in home updates; do
+          for m in home updates settings; do
             QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui $m --screenshot shots/$m.png 2> shots/err-$m.txt || { cat shots/err-$m.txt; exit 1; }
             cat shots/err-$m.txt
             if grep -E "ReferenceError|TypeError|is not a type|Cannot assign|Unable to assign|unavailable|SyntaxError|is not installed" shots/err-$m.txt; then
               echo "QML problem on the $m screen"; exit 1
+            fi
+          done
+          for pg in appearance display sound network updates about power; do
+            QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui settings --set page=$pg --screenshot shots/settings-$pg.png 2> shots/err-settings-$pg.txt || { cat shots/err-settings-$pg.txt; exit 1; }
+            cat shots/err-settings-$pg.txt
+            if grep -E "ReferenceError|TypeError|is not a type|Cannot assign|Unable to assign|unavailable|SyntaxError|is not installed" shots/err-settings-$pg.txt; then
+              echo "QML problem on the settings page $pg"; exit 1
             fi
           done
           python3 -m py_compile packages/lareon-live/usr/lib/lareon/lareon-install packages/lareon-ui/usr/lib/lareon/lareon-apps packages/lareon-ui/usr/lib/lareon/lareon-update-check packages/lareon-ui/usr/lib/lareon/lareon-update-install packages/lareon-branding/usr/lib/lareon/recolor-icons packages/lareon-branding/usr/lib/lareon/rename-apps

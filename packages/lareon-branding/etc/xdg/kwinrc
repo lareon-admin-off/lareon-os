@@ -9,3 +9,14 @@ LatencyPolicy=Medium
 [Plugins]
 blurEnabled=true
 contrastEnabled=true
+glideEnabled=true
+fadingpopupsEnabled=true
+slidingpopupsEnabled=true
+maximizeEnabled=true
+squashEnabled=true
+[Effect-blur]
+BlurStrength=8
+NoiseStrength=2
+[Effect-glide]
+InDuration=260
+OutDuration=200

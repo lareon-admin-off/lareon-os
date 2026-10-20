@@ -9,16 +9,17 @@ Window {
     flags: Sys.mode === "home" ? (Qt.Window | Qt.FramelessWindowHint) : Qt.Window
     x: 96
     y: 52
-    width: Sys.mode === "crash" ? 560 : Sys.mode === "updates" ? 640 : Sys.mode === "home" ? 560 : 1920
+    width: Sys.mode === "crash" ? 560 : Sys.mode === "updates" ? 640 : Sys.mode === "settings" ? 960 : Sys.mode === "home" ? 560 : 1920
     height: Sys.mode === "crash" ? Math.max(260, loader.item ? loader.item.implicitHeight : 300)
-          : Sys.mode === "updates" ? 560 : Sys.mode === "home" ? 680 : 1080
-    visibility: Sys.mode === "updates" || Sys.mode === "home" ? Window.Windowed
+          : Sys.mode === "updates" ? 560 : Sys.mode === "settings" ? 640 : Sys.mode === "home" ? 680 : 1080
+    visibility: Sys.mode === "updates" || Sys.mode === "settings" || Sys.mode === "home" ? Window.Windowed
               : Sys.windowed ? Window.Windowed : Window.FullScreen
     title: Sys.mode === "crash"
            ? qsTr("%1 closed unexpectedly").arg(Sys.args.name || qsTr("An app"))
            : Sys.mode === "install" ? qsTr("Install Lareon OS")
            : Sys.mode === "home" ? qsTr("Lareon Home")
            : Sys.mode === "updates" ? qsTr("Updates")
+           : Sys.mode === "settings" ? qsTr("Settings")
      : qsTr("Lareon OS")
 
     Loader {
@@ -29,6 +30,7 @@ Window {
                        : Sys.mode === "crash" ? crashScreen
                        : Sys.mode === "home" ? homeScreen
                        : Sys.mode === "updates" ? updatesScreen
+                       : Sys.mode === "settings" ? settingsScreen
                        : setupScreen
     }
 
@@ -63,6 +65,7 @@ Window {
     Component { id: crashScreen; CrashDialog {} }
     Component { id: homeScreen; HomeScreen {} }
     Component { id: updatesScreen; UpdatesScreen {} }
+    Component { id: settingsScreen; SettingsScreen {} }
 
     // Lareon Home closes when you click away from it
     property bool wasActive: false

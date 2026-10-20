@@ -118,6 +118,15 @@ for t in Lareon LareonLight; do
         install -Dm644 "$LOGOS/${pair#*:}.svg" "$BP/usr/share/icons/$t/scalable/apps/${pair%%:*}.svg"
     done
 done
+# Whatever name an app's window reports, the Lareon icon is what the dock finds
+for t in Lareon LareonLight; do
+    for alias in Lareon lareon-desktop org.lareon.desktop electron Electron; do
+        install -Dm644 "$LOGOS/lareon-icon.svg" "$BP/usr/share/icons/$t/scalable/apps/$alias.svg"
+    done
+    for alias in Ember ember org.lareon.ember; do
+        install -Dm644 "$LOGOS/ember-logo.svg" "$BP/usr/share/icons/$t/scalable/apps/$alias.svg"
+    done
+done
 install -Dm644 "$LOGOS/lareon-icon-512.png" "$BP/usr/share/pixmaps/lareon-logo.png"
 install -Dm644 "$LOGOS/lareon-app-icon.png" "$BP/usr/share/pixmaps/lareon-desktop.png"
 install -Dm644 "$LOGOS/lareon-icon-256.png" "$BP/usr/share/plymouth/themes/lareon/lareon.png"
@@ -313,7 +322,15 @@ for a in assets:
             [ -f "$CA/opt/ember/chrome-sandbox" ] && chmod 4755 "$CA/opt/ember/chrome-sandbox"
             cat > "$CA/usr/bin/ember" <<'EOT'
 #!/bin/sh
-exec /opt/ember/AppRun "$@"
+# Runs Ember from /opt/ember. Without a setuid sandbox helper, Chromium needs
+# --no-sandbox in this environment; problems are logged to ~/.cache/ember.log
+LOG="${XDG_CACHE_HOME:-$HOME/.cache}/ember.log"
+mkdir -p "$(dirname "$LOG")"
+SB=/opt/ember/chrome-sandbox
+if [ -u "$SB" ]; then
+    exec /opt/ember/AppRun "$@" 2>>"$LOG"
+fi
+exec /opt/ember/AppRun --no-sandbox "$@" 2>>"$LOG"
 EOT
             chmod 755 "$CA/usr/bin/ember"
             cat > "$CA/usr/share/applications/ember.desktop" <<'EOT'

@@ -51,3 +51,23 @@ qt5-style-kvantum
 # Start-up chime player
 pipewire-bin
 pulseaudio-utils
+
+# Libraries the Ember and Lareon apps (Electron) need to start
+libgtk-3-0t64
+libnss3
+libasound2t64
+libgbm1
+libxss1
+libxtst6
+libatspi2.0-0t64
+libcups2t64
+libdrm2
+libxkbcommon0
+libnotify4
+libsecret-1-0
+libxcomposite1
+libxdamage1
+libxrandr2
+libpango-1.0-0
+libcairo2
+xdg-utils

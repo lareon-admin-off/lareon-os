@@ -52,6 +52,7 @@ qt_add_qml_module(lareon-ui
         CrashDialog.qml
         HomeScreen.qml
         UpdatesScreen.qml
+        SettingsScreen.qml
 )
 
 target_link_libraries(lareon-ui PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick)

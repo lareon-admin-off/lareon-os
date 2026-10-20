@@ -176,6 +176,8 @@ APPS = {  # icon name -> (glyph, gradient)
     "firefox": ("globe", "ember"),
     "web-browser": ("globe", "ember"),
     "lareon-install": ("install", "ember"),
+    "lareon-apps": ("apps", "ember"),
+    "lareon-updates": ("update", "leaf"),
     "org.kde.bluedevil": ("bluetooth", "dusk"),
     "lareon-updates": ("update", None),
     "system-software-update": ("update", None),

@@ -1,0 +1,2 @@
+// After every package change, put the Lareon names and icons back on the menu entries.
+DPkg::Post-Invoke { "[ -x /usr/lib/lareon/rename-apps ] && /usr/lib/lareon/rename-apps >/dev/null 2>&1 || true"; };

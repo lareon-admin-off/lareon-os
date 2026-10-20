@@ -6,10 +6,24 @@ The original entries stay where the packages put them. A renamed copy goes in
 The old name is kept as a search keyword."""
 import os
 import re
+import shutil
 import sys
 
-SRC = "/usr/share/applications"
-DST = "/usr/local/share/applications"
+SRC = "/usr/share/applications"   # renamed in place; originals kept in BACKUP
+DST = "/usr/share/applications"
+BACKUP = "/usr/share/lareon/original-applications"
+THEME_DIRS = ["/usr/share/icons/Lareon", "/usr/share/icons/LareonBase", "/usr/share/icons/Papirus-Dark"]
+HIDE = {"xterm.desktop", "uxterm.desktop", "debian-xterm.desktop", "debian-uxterm.desktop", "reportbug.desktop",
+        "org.kde.kinfocenter.desktop.debian", "info.desktop", "org.kde.plasma.emojier.desktop.x", "avahi-discover.desktop",
+        "bssh.desktop", "bvnc.desktop", "qv4l2.desktop", "qvidcap.desktop", "htop.desktop", "vim.desktop", "gvim.desktop",
+        "org.kde.kwalletmanager5.desktop", "org.kde.khelpcenter.desktop", "org.kde.plasma.themeexplorer.desktop",
+        "kcm_users.desktop.x", "cups.desktop", "org.kde.kdeconnect.nonplasma.desktop", "org.kde.kdeconnect-settings.desktop.x",
+        "debian-reference-common.desktop", "dde-calendar.desktop", "nm-connection-editor.desktop"}
+CATEGORY_ICON = {"Network": "applications-internet", "Utility": "applications-utilities", "System": "applications-system",
+                 "Settings": "preferences-system", "Office": "applications-office", "Graphics": "applications-graphics",
+                 "AudioVideo": "applications-multimedia", "Audio": "applications-multimedia", "Video": "applications-multimedia",
+                 "Development": "applications-development", "Game": "applications-games", "Education": "applications-education",
+                 "Science": "applications-science", "TextEditor": "text-editor", "Accessibility": "preferences-desktop-accessibility"}
 
 NAMES = {  # desktop file -> (Name, GenericName)
     "org.kde.dolphin.desktop": ("Files", "File manager"),
@@ -21,8 +35,8 @@ NAMES = {  # desktop file -> (Name, GenericName)
     "org.kde.ark.desktop": ("Archives", "Archive manager"),
     "org.kde.spectacle.desktop": ("Screenshots", "Screenshot tool"),
     "org.kde.discover.desktop": ("Software", "App store"),
-    "systemsettings.desktop": ("Settings", "System settings"),
-    "org.kde.systemsettings.desktop": ("Settings", "System settings"),
+    "systemsettings.desktop": ("Advanced Settings", "System settings"),
+    "org.kde.systemsettings.desktop": ("Advanced Settings", "System settings"),
     "org.kde.kinfocenter.desktop": ("System Info", "System information"),
     "org.kde.plasma-systemmonitor.desktop": ("Monitor", "System monitor"),
     "org.kde.plasma.emojier.desktop": ("Emoji", "Emoji selector"),
@@ -32,13 +46,68 @@ NAMES = {  # desktop file -> (Name, GenericName)
 }
 
 
+def theme_names():
+    names = set()
+    for root in THEME_DIRS:
+        for dp, _dn, files in os.walk(root, followlinks=True):
+            for f in files:
+                names.add(os.path.splitext(f)[0])
+    return names
+
+
+def sweep(known):
+    """Every visible menu entry gets a Lareon-theme icon; strays get one by category.
+    Entries nobody needs in a desktop menu are hidden."""
+    fixed = hidden = 0
+    for fname in sorted(os.listdir(DST)):
+        if not fname.endswith(".desktop"):
+            continue
+        path = os.path.join(DST, fname)
+        try:
+            text = open(path, encoding="utf-8").read()
+        except OSError:
+            continue
+        if "[Desktop Entry]" not in text or re.search(r"^(NoDisplay|Hidden)=true", text, re.M):
+            continue
+        lines = text.split("\n")
+        if fname in HIDE:
+            i = lines.index("[Desktop Entry]")
+            lines.insert(i + 1, "NoDisplay=true")
+            open(path, "w", encoding="utf-8").write("\n".join(lines))
+            hidden += 1
+            continue
+        m = re.search(r"^Icon=(.*)$", text, re.M)
+        icon = m.group(1).strip() if m else ""
+        if icon and not icon.startswith("/") and icon in known:
+            continue
+        cats = re.search(r"^Categories=(.*)$", text, re.M)
+        new = "applications-other"
+        for c in (cats.group(1).split(";") if cats else []):
+            if c in CATEGORY_ICON:
+                new = CATEGORY_ICON[c]
+                break
+        if m:
+            text = text.replace(m.group(0), "Icon=" + new, 1)
+        else:
+            text = text.replace("[Desktop Entry]", "[Desktop Entry]\nIcon=" + new, 1)
+        open(path, "w", encoding="utf-8").write(text)
+        fixed += 1
+    print("icons fixed on %d entries, %d hidden" % (fixed, hidden))
+
+
 def main():
     os.makedirs(DST, exist_ok=True)
+    os.makedirs(BACKUP, exist_ok=True)
     done = 0
     for fname, (name, generic) in NAMES.items():
         src = os.path.join(SRC, fname)
         if not os.path.isfile(src):
             continue
+        bak = os.path.join(BACKUP, fname)
+        cur = open(src, encoding="utf-8").read()
+        if "\nName=" + name + "\n" not in cur or not os.path.isfile(bak):
+            shutil.copy2(src, bak)                 # the package's own copy; keep it to rebuild from
+        src = bak
         out, old, keys = [], "", None
         in_entry = False
         for line in open(src, encoding="utf-8").read().splitlines():
@@ -65,6 +134,7 @@ def main():
         open(os.path.join(DST, fname), "w", encoding="utf-8").write("\n".join(res) + "\n")
         done += 1
     print("renamed %d apps" % done)
+    sweep(theme_names())
 
 
 if __name__ == "__main__":

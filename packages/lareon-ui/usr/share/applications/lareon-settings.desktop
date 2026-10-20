@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Settings
+GenericName=Lareon Settings
+Comment=Appearance, sound, network and more
+Icon=preferences-system
+Exec=lareon-ui settings
+Terminal=false
+Categories=Settings;System;
+Keywords=settings;preferences;appearance;wifi;sound;display;
+StartupNotify=true

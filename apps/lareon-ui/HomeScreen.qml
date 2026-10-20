@@ -14,7 +14,7 @@ Item {
     readonly property string tools: "/usr/lib/lareon/"
     readonly property var pinnedIds: [
         "lareon.desktop", "ember.desktop", "org.kde.dolphin.desktop",
-        "org.kde.konsole.desktop", "org.kde.discover.desktop", "org.kde.systemsettings.desktop"
+        "org.kde.konsole.desktop", "org.kde.discover.desktop", "lareon-settings.desktop"
     ]
 
     readonly property var demoApps: [
@@ -23,7 +23,7 @@ Item {
         { id: "org.kde.dolphin.desktop", name: "Files", icon: "", path: "" },
         { id: "org.kde.konsole.desktop", name: "Terminal", icon: "", path: "" },
         { id: "org.kde.discover.desktop", name: "Software", icon: "", path: "" },
-        { id: "org.kde.systemsettings.desktop", name: "Settings", icon: "", path: "" },
+        { id: "lareon-settings.desktop", name: "Settings", icon: "", path: "" },
         { id: "a", name: "Calculator", icon: "", path: "" },
         { id: "b", name: "Documents", icon: "", path: "" },
         { id: "c", name: "Monitor", icon: "", path: "" },
@@ -117,6 +117,17 @@ Item {
         border.width: 1
         border.color: Qt.rgba(1, 1, 1, 0.12)
         clip: true
+
+        // opens with a soft grow-and-fade from the dock side
+        opacity: 0
+        scale: 0.94
+        transformOrigin: Item.Left
+        Component.onCompleted: openAnim.start()
+        ParallelAnimation {
+            id: openAnim
+            NumberAnimation { target: panel; property: "opacity"; from: 0; to: 1; duration: 220; easing.type: Easing.OutCubic }
+            NumberAnimation { target: panel; property: "scale"; from: 0.94; to: 1; duration: 320; easing.type: Easing.OutBack; easing.overshoot: 0.8 }
+        }
 
         // brand gradient edge, like the Lareon app
         Rectangle {
@@ -394,7 +405,7 @@ Item {
                 spacing: 8
                 Repeater {
                     model: [
-                        { label: qsTr("Lock"), cmd: "loginctl", args: ["lock-session"] },
+                        { label: qsTr("Lock"), cmd: "/usr/lib/lareon/lock-session", args: [] },
                         { label: qsTr("Restart"), cmd: "systemctl", args: ["reboot"] },
                         { label: qsTr("Shut down"), cmd: "systemctl", args: ["poweroff"] }
                     ]

@@ -5,6 +5,7 @@
 //   lareon-ui install-failed --set log=FILE      "Lareon OS couldn't be installed"
 //   lareon-ui home                               the Lareon launcher (search and all apps)
 //   lareon-ui updates                            Software updates
+//   lareon-ui settings [--set page=sound]        Lareon Settings
 //   lareon-ui crash --set name=Files --set exe=/usr/bin/dolphin ...
 //
 // Options for testing:
@@ -56,7 +57,7 @@ int main(int argc, char *argv[])
 
     const QStringList positional = parser.positionalArguments();
     const QString mode = positional.isEmpty() ? QStringLiteral("setup") : positional.first();
-    if (mode != QLatin1String("setup") && mode != QLatin1String("install") && mode != QLatin1String("install-failed") && mode != QLatin1String("crash") && mode != QLatin1String("home") && mode != QLatin1String("updates")) {
+    if (mode != QLatin1String("setup") && mode != QLatin1String("install") && mode != QLatin1String("install-failed") && mode != QLatin1String("crash") && mode != QLatin1String("home") && mode != QLatin1String("updates") && mode != QLatin1String("settings")) {
         fprintf(stderr, "lareon-ui: unknown screen '%s'\n", qPrintable(mode));
         return 2;
     }

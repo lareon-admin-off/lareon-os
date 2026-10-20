@@ -44,7 +44,7 @@ try {
         tasks.writeConfig("launchers",
             "applications:lareon-home.desktop,applications:lareon.desktop,applications:ember.desktop," +
             "applications:org.kde.dolphin.desktop,applications:org.kde.discover.desktop," +
-            "applications:org.kde.konsole.desktop,applications:systemsettings.desktop")
+            "applications:org.kde.konsole.desktop,applications:lareon-settings.desktop")
         tasks.writeConfig("showOnlyCurrentDesktop", "false")
         tasks.writeConfig("iconSpacing", "3")
         tasks.writeConfig("indicateAudioStreams", "true")
