@@ -1,0 +1,11 @@
+[org.kde.kdecoration2]
+library=org.kde.kwin.aurorae
+theme=__aurorae__svg__Lareon
+ButtonsOnLeft=
+ButtonsOnRight=IAX
+BorderSize=Normal
+[Compositing]
+LatencyPolicy=Medium
+[Plugins]
+blurEnabled=true
+contrastEnabled=true

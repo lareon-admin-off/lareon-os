@@ -1,0 +1,14 @@
+#!/bin/sh
+# Prints what style the system is really using. Run it and send the output if anything still looks stock.
+echo "== Lareon doctor =="
+grep -E '^(PRETTY_NAME|VERSION)=' /etc/os-release
+dpkg -l 'lareon-*' 2>/dev/null | awk '/^ii/{print $2, $3}'
+for f in ~/.config/kdeglobals ~/.config/kwinrc ~/.config/kvantum/kvantum.kvconfig ~/.config/Kvantum/kvantum.kvconfig; do
+    [ -f "$f" ] && { echo "-- $f"; grep -E 'widgetStyle|Theme|theme|ColorScheme|ButtonsOn|LookAndFeel' "$f"; }
+done
+echo "-- QT_STYLE_OVERRIDE=${QT_STYLE_OVERRIDE:-unset}"
+echo "-- sddm theme:"; grep -rh '^Current=' /etc/sddm.conf /etc/sddm.conf.d 2>/dev/null
+echo "-- kvantum:"; command -v kvantummanager >/dev/null && echo installed || echo MISSING
+ls /usr/share/Kvantum 2>/dev/null
+echo "-- icon themes:"; ls /usr/share/icons | grep -i lareon
+echo "-- renamed apps:"; grep -h '^Name=' /usr/share/applications/org.kde.dolphin.desktop /usr/share/applications/org.kde.konsole.desktop 2>/dev/null | head -4

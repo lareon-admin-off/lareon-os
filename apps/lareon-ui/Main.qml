@@ -5,11 +5,14 @@ import Lareon
 Window {
     id: win
     visible: true
-    color: Theme.bg
-    width: Sys.mode === "crash" ? 560 : Sys.mode === "updates" ? 640 : 1920
+    color: Sys.mode === "home" ? "transparent" : Theme.bg
+    flags: Sys.mode === "home" ? (Qt.Window | Qt.FramelessWindowHint) : Qt.Window
+    x: 96
+    y: 52
+    width: Sys.mode === "crash" ? 560 : Sys.mode === "updates" ? 640 : Sys.mode === "home" ? 560 : 1920
     height: Sys.mode === "crash" ? Math.max(260, loader.item ? loader.item.implicitHeight : 300)
-          : Sys.mode === "updates" ? 560 : 1080
-    visibility: Sys.mode === "updates" ? Window.Windowed
+          : Sys.mode === "updates" ? 560 : Sys.mode === "home" ? 680 : 1080
+    visibility: Sys.mode === "updates" || Sys.mode === "home" ? Window.Windowed
               : Sys.windowed ? Window.Windowed : Window.FullScreen
     title: Sys.mode === "crash"
            ? qsTr("%1 closed unexpectedly").arg(Sys.args.name || qsTr("An app"))

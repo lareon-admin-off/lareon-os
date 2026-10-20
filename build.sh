@@ -112,6 +112,12 @@ install_icon lareon-fledge fledge-logo
 install_icon lareon-aster  aster-logo
 install_icon lareon-dusk   dusk-logo
 install_icon lareon-ember  ember-logo
+# The Lareon icon themes carry the logos too, so they win over any other copy
+for t in Lareon LareonLight; do
+    for pair in lareon:lareon-icon lareon-fledge:fledge-logo lareon-aster:aster-logo lareon-dusk:dusk-logo lareon-ember:ember-logo; do
+        install -Dm644 "$LOGOS/${pair#*:}.svg" "$BP/usr/share/icons/$t/scalable/apps/${pair%%:*}.svg"
+    done
+done
 install -Dm644 "$LOGOS/lareon-icon-512.png" "$BP/usr/share/pixmaps/lareon-logo.png"
 install -Dm644 "$LOGOS/lareon-app-icon.png" "$BP/usr/share/pixmaps/lareon-desktop.png"
 install -Dm644 "$LOGOS/lareon-icon-256.png" "$BP/usr/share/plymouth/themes/lareon/lareon.png"
@@ -128,6 +134,7 @@ install -Dm644 "$BRAND/fonts/OFL.txt" "$BP/usr/share/doc/lareon-branding/geist-O
 
 # Colour schemes and system-wide desktop defaults
 python3 "$ROOT/artwork/make_color_schemes.py" "$BP/usr/share/color-schemes" "$BP/etc/xdg/kdeglobals"
+printf "\n[KDE]\nAnimationDurationFactor=0.7\n" >> "$BP/etc/xdg/kdeglobals"
 
 # Global themes (System Settings > Colors & Themes > Global Theme). Both theme
 # folders are committed as real files; the build only adds the Lareon mark for
@@ -367,6 +374,9 @@ write_entry() {  # root  exe  Name  Comment  Icon  Categories
     fi
     [ -z "$bin" ] && { warn "no '$exe' program inside the package"; return 1; }
     rm -f "$root"/usr/share/applications/*.desktop
+    # The app's own icons are Electron's default one at every size; the Lareon
+    # logos from lareon-branding are the only ones that may be installed.
+    rm -rf "$root"/usr/share/icons/hicolor/*/apps "$root"/usr/share/pixmaps
     mkdir -p "$root/usr/share/applications"
     cat > "$root/usr/share/applications/$exe.desktop" <<EOT
 [Desktop Entry]

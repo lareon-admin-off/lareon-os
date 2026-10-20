@@ -1,0 +1,21 @@
+[General]
+count=1
+rules=lareon-home
+
+[lareon-home]
+Description=Lareon Home sits next to the dock
+above=true
+aboverule=2
+noborder=true
+noborderrule=2
+position=96,52
+positionrule=2
+skiptaskbar=true
+skiptaskbarrule=2
+skipswitcher=true
+skipswitcherrule=2
+title=Lareon Home
+titlematch=1
+wmclass=lareon-ui
+wmclasscomplete=false
+wmclassmatch=1
