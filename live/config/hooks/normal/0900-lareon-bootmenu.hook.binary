@@ -56,6 +56,17 @@ if [ -f /boot/grub/lareon/theme.txt ]; then
     export theme
 fi
 
+# A drive that already has Lareon OS on it (it holds /boot/grub/lareon-installed)?
+# Then the first choice starts that system, so a restart after installing goes
+# straight into it even with the install disc still in the drive.
+set lareon_inst=""
+search --no-floppy --file --set=lareon_inst /boot/grub/lareon-installed
+if [ -n "\$lareon_inst" ]; then
+    menuentry "Start Lareon OS (installed on this computer)" --class lareon {
+        set root=\$lareon_inst
+        configfile /boot/grub/grub.cfg
+    }
+fi
 menuentry "Install Lareon OS" --class lareon {
 	linux $kernel $options lareon.mode=install$tail_args
 	initrd $initrd

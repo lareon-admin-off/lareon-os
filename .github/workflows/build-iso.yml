@@ -53,7 +53,7 @@ jobs:
               echo "QML problem on the $m screen"; exit 1
             fi
           done
-          for pg in appearance display sound network updates about power; do
+          for pg in appearance display sound network bluetooth input power time apps users privacy updates about; do
             QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui settings --set page=$pg --screenshot shots/settings-$pg.png 2> shots/err-settings-$pg.txt || { cat shots/err-settings-$pg.txt; exit 1; }
             cat shots/err-settings-$pg.txt
             if grep -E "ReferenceError|TypeError|is not a type|Cannot assign|Unable to assign|unavailable|SyntaxError|is not installed" shots/err-settings-$pg.txt; then

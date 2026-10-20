@@ -331,6 +331,10 @@ def install(cfg):
     cfg = TARGET + "/boot/grub/grub.cfg"
     if not os.path.exists(cfg) or root_uuid not in open(cfg).read():
         raise Failed("The boot menu doesn't point at the new drive (see the log).")
+    # The install disc looks for this file: when it is found, the disc starts the
+    # installed system by itself instead of the installer (see the boot menu hook).
+    with open(TARGET + "/boot/grub/lareon-installed", "w") as f:
+        f.write("Lareon OS is installed on this drive.\n")
 
     # 7. done
     progress(98, "Finishing")

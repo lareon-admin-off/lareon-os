@@ -12,3 +12,17 @@ echo "-- kvantum:"; command -v kvantummanager >/dev/null && echo installed || ec
 ls /usr/share/Kvantum 2>/dev/null
 echo "-- icon themes:"; ls /usr/share/icons | grep -i lareon
 echo "-- renamed apps:"; grep -h '^Name=' /usr/share/applications/org.kde.dolphin.desktop /usr/share/applications/org.kde.konsole.desktop 2>/dev/null | head -4
+echo "-- apps (Lareon, Ember):"
+for a in lareon ember; do
+    echo "[$a] desktop entry:"; grep -h -E '^(Exec|Icon|StartupWMClass)=' /usr/share/applications/$a.desktop 2>/dev/null
+    log="${XDG_CACHE_HOME:-$HOME/.cache}/$a.log"
+    [ -f "$log" ] && { echo "[$a] last log lines:"; tail -n 12 "$log"; } || echo "[$a] no log yet (it has not been started)"
+done
+for d in /opt/ember /opt/Ember /opt/Lareon /opt/lareon; do
+    [ -d "$d" ] || continue
+    echo "[$d] files:"; ls -l "$d" 2>/dev/null | head -n 8
+    for b in "$d/ember" "$d/lareon" "$d/AppRun"; do
+        [ -x "$b" ] && { echo "[$b] missing libraries:"; ldd "$b" 2>/dev/null | grep "not found" || echo "none"; }
+    done
+done
+echo "-- sandbox support: $(unshare -Ur true 2>/dev/null && echo user-namespaces-ok || echo user-namespaces-blocked)"

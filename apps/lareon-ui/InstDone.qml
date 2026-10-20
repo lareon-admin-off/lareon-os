@@ -68,9 +68,9 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             Layout.maximumWidth: 600
             wrapMode: Text.Wrap
-            text: root.stuck ? qsTr("Lareon OS is installed, but this computer didn’t restart by itself. Turn it off and on again (in a virtual machine, stop and start it) and it will start into Lareon OS.")
+            text: root.stuck ? qsTr("Lareon OS is installed, but this computer didn’t restart by itself. Turn it off and on again (in a virtual machine, stop and start it). If the install disc starts again, pick “Start Lareon OS (installed on this computer)”.")
                 : root.restarting ? qsTr("Restarting…")
-                : qsTr("Restarting in %1 seconds. If you started from a USB stick, take it out first.").arg(root.seconds)
+                : qsTr("Restarting in %1 seconds, then Lareon OS starts by itself. If you started from a USB stick, take it out when the screen goes dark.").arg(root.seconds)
             color: Theme.muted
             font.family: Theme.font
             font.pixelSize: 17

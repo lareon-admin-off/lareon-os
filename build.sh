@@ -322,15 +322,7 @@ for a in assets:
             [ -f "$CA/opt/ember/chrome-sandbox" ] && chmod 4755 "$CA/opt/ember/chrome-sandbox"
             cat > "$CA/usr/bin/ember" <<'EOT'
 #!/bin/sh
-# Runs Ember from /opt/ember. Without a setuid sandbox helper, Chromium needs
-# --no-sandbox in this environment; problems are logged to ~/.cache/ember.log
-LOG="${XDG_CACHE_HOME:-$HOME/.cache}/ember.log"
-mkdir -p "$(dirname "$LOG")"
-SB=/opt/ember/chrome-sandbox
-if [ -u "$SB" ]; then
-    exec /opt/ember/AppRun "$@" 2>>"$LOG"
-fi
-exec /opt/ember/AppRun --no-sandbox "$@" 2>>"$LOG"
+exec /usr/lib/lareon/electron-run /opt/ember/AppRun ember "$@"
 EOT
             chmod 755 "$CA/usr/bin/ember"
             cat > "$CA/usr/share/applications/ember.desktop" <<'EOT'
@@ -338,7 +330,7 @@ EOT
 Type=Application
 Name=Ember
 Comment=The Lareon web browser
-Exec=/usr/bin/ember --ozone-platform-hint=auto --class=ember %U
+Exec=/usr/lib/lareon/electron-run /opt/ember/AppRun ember %U
 Icon=lareon-ember
 Terminal=false
 Categories=Network;WebBrowser;
@@ -400,7 +392,7 @@ write_entry() {  # root  exe  Name  Comment  Icon  Categories
 Type=Application
 Name=$3
 Comment=$4
-Exec=$bin --ozone-platform-hint=auto --class=$exe %U
+Exec=/usr/lib/lareon/electron-run $bin $exe %U
 Icon=$5
 Terminal=false
 Categories=$6

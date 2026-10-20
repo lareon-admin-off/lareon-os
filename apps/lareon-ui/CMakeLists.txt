@@ -53,6 +53,24 @@ qt_add_qml_module(lareon-ui
         HomeScreen.qml
         UpdatesScreen.qml
         SettingsScreen.qml
+        SCard.qml
+        SRow.qml
+        SSlider.qml
+        SSegment.qml
+        SSelect.qml
+        SetAppearance.qml
+        SetDisplay.qml
+        SetSound.qml
+        SetNetwork.qml
+        SetBluetooth.qml
+        SetInput.qml
+        SetPower.qml
+        SetTime.qml
+        SetApps.qml
+        SetUsers.qml
+        SetPrivacy.qml
+        SetUpdates.qml
+        SetAbout.qml
 )
 
 target_link_libraries(lareon-ui PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick)

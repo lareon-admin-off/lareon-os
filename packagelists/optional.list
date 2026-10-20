@@ -71,3 +71,5 @@ libxrandr2
 libpango-1.0-0
 libcairo2
 xdg-utils
+
+xwayland

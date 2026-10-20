@@ -1,6 +1,6 @@
 [General]
-count=1
-rules=lareon-home
+count=3
+rules=lareon-home,lareon-app,ember-app
 
 [lareon-home]
 Description=Lareon Home sits next to the dock
@@ -19,3 +19,19 @@ titlematch=1
 wmclass=lareon-ui
 wmclasscomplete=false
 wmclassmatch=1
+
+[lareon-app]
+Description=The Lareon app uses the Lareon launcher icon in the dock
+desktopfile=lareon.desktop
+desktopfilerule=2
+wmclass=(^|\\s)lareon(\\s|$)
+wmclasscomplete=false
+wmclassmatch=3
+
+[ember-app]
+Description=Ember uses the Ember launcher icon in the dock
+desktopfile=ember.desktop
+desktopfilerule=2
+wmclass=(^|\\s)ember(\\s|$)
+wmclasscomplete=false
+wmclassmatch=3

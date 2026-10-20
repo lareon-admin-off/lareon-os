@@ -1,0 +1,23 @@
+#!/bin/sh
+# Starts a Lareon Electron app (Lareon, Ember) so that:
+#  - its window gets the class the dock expects (--class), which is how the
+#    running app lines up with its pinned icon instead of getting a second one;
+#  - it uses the X11 backend, so that class is always what we set;
+#  - it still starts when the sandbox helper isn't set up for this user;
+#  - anything it prints is kept in ~/.cache/<name>.log, for lareon-doctor.
+# usage: electron-run PROGRAM CLASS [arguments...]
+prog="$1"; cls="$2"; shift 2 || exit 2
+log="${XDG_CACHE_HOME:-$HOME/.cache}/$cls.log"
+mkdir -p "$(dirname "$log")" 2>/dev/null
+dir="$(dirname "$(readlink -f "$prog")")"
+sb="$dir/chrome-sandbox"
+flags="--ozone-platform=x11 --class=$cls"
+if [ -e "$sb" ] && [ -u "$sb" ] && [ "$(stat -c %u "$sb" 2>/dev/null)" = 0 ]; then
+    :                                           # a proper setuid sandbox helper: use it
+elif unshare -Ur true 2>/dev/null; then
+    flags="$flags --disable-setuid-sandbox"     # user namespaces: sandbox without the helper
+else
+    flags="$flags --no-sandbox"                 # last resort
+fi
+{ date; echo "start: $prog $flags $*"; } >> "$log" 2>/dev/null
+exec "$prog" $flags "$@" 2>>"$log"
