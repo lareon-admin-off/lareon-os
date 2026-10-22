@@ -9,6 +9,14 @@ LOG=/tmp/lareon-install.log
 # Create /etc/lareon/use-calamares to use the old Calamares installer instead.
 if [ -x /usr/lib/lareon/lareon-install ] && [ ! -e /etc/lareon/use-calamares ]; then
     export QT_QUICK_CONTROLS_STYLE=Basic QT_QUICK_BACKEND=software
+    # Started from the install disc's own screen ("Lareon OS" in the boot menu):
+    # ask first whether to install or just try. "Try" ends this session, which
+    # opens the live desktop.
+    if grep -qw 'lareon.mode=choose' /proc/cmdline && [ ! -e /tmp/lareon-chosen ]; then
+        lareon-ui welcome
+        [ $? -eq 10 ] || exit 2
+        touch /tmp/lareon-chosen
+    fi
     exec lareon-ui install
 fi
 

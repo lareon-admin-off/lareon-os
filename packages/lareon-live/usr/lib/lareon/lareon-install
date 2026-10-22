@@ -310,6 +310,7 @@ def install(cfg):
     os.makedirs(TARGET + "/etc/initramfs-tools/conf.d", exist_ok=True)
     with open(TARGET + "/etc/initramfs-tools/conf.d/resume", "w") as f:
         f.write("RESUME=none\n")
+    chroot("plymouth-set-default-theme", "lareon", check=False)   # the Lareon boot screen
     chroot("update-initramfs", "-c", "-k", "all")
 
     progress(94, "Installing the boot loader")
@@ -320,6 +321,26 @@ def install(cfg):
             text = re.sub(r"^GRUB_DISTRIBUTOR=.*$", "GRUB_DISTRIBUTOR='Lareon OS'", text, flags=re.M)
         else:
             text += "\nGRUB_DISTRIBUTOR='Lareon OS'\n"
+        open(grub_default, "w").write(text)
+    # Nobody should see the boot menu or text on the way in: GRUB stays hidden (Esc
+    # still opens it for troubleshooting) and the kernel and services stay quiet,
+    # so only the Lareon boot screen shows.
+    if os.path.exists(grub_default):
+        text = open(grub_default).read()
+
+        def set_key(t, key, value):
+            line = '%s=%s' % (key, value)
+            if re.search(r"^%s=" % key, t, re.M):
+                return re.sub(r"^%s=.*$" % key, line, t, flags=re.M)
+            return t + "\n" + line + "\n"
+
+        text = set_key(text, "GRUB_TIMEOUT", "0")
+        text = set_key(text, "GRUB_TIMEOUT_STYLE", "hidden")
+        text = set_key(text, "GRUB_RECORDFAIL_TIMEOUT", "0")
+        text = set_key(text, "GRUB_DISABLE_OS_PROBER", "true")
+        text = set_key(text, "GRUB_GFXPAYLOAD_LINUX", "keep")
+        quiet = "quiet splash loglevel=3 vt.global_cursor_default=0 systemd.show_status=0 rd.systemd.show_status=0 udev.log_level=3 rd.udev.log_level=3 plymouth.ignore-serial-consoles"
+        text = set_key(text, "GRUB_CMDLINE_LINUX_DEFAULT", '"%s"' % quiet)
         open(grub_default, "w").write(text)
     # In a virtual machine the graphics card is often one the Linux driver can't
     # use (VirtualBox/UTM "VMSVGA": "vmwgfx seems to be running on an unsupported

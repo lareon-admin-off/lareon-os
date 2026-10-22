@@ -3,6 +3,7 @@
 # Normal start: the Lareon mark on the dark Lareon background, gently pulsing.
 # Encrypted disk: the password prompt with orange dots; after a wrong password
 #   "That password didn't unlock the disk. Try again."
+# Shutting down / restarting (mode "shutdown"): "See you soon".
 # Updates (Plymouth mode "updates"/"system-upgrade"): "Installing updates",
 #   a progress bar in the brand gradient, and the update tool's messages.
 # Start-up problems: /usr/lib/lareon/emergency sends one of these messages and
@@ -58,6 +59,10 @@ screens.updates.image = load("updates.png");
 screens.updates.sprite = Sprite(screens.updates.image);
 place_center(screens.updates.sprite, screens.updates.image, -60);
 
+screens.shutdown.image = load("shutdown.png");
+screens.shutdown.sprite = Sprite(screens.shutdown.image);
+place_center(screens.shutdown.sprite, screens.shutdown.image, -20);
+
 bar.track = load("bar-track.png");
 bar.fill_full = load("bar-fill.png");
 bar.track_sprite = Sprite(bar.track);
@@ -81,12 +86,14 @@ fun show(name) {
     global.screens.generic.sprite.SetOpacity(0);
     global.screens.repairing.sprite.SetOpacity(0);
     global.screens.updates.sprite.SetOpacity(0);
+    global.screens.shutdown.sprite.SetOpacity(0);
     global.bar.track_sprite.SetOpacity(0);
     global.bar.fill_sprite.SetOpacity(0);
     global.wrong.sprite.SetOpacity(0);
     global.status.sprite = NULL;
     clear_prompt();
     if (name == "boot") global.logo.sprite.SetOpacity(1);
+    if (name == "shutdown") global.screens.shutdown.sprite.SetOpacity(1);
     if (name == "drive") global.screens.drive.sprite.SetOpacity(1);
     if (name == "generic") global.screens.generic.sprite.SetOpacity(1);
     if (name == "repairing") {
@@ -109,6 +116,7 @@ fun refresh_callback() {
         global.logo.sprite.SetOpacity(0.78 + 0.22 * Math.Sin(global.tick / 22));
         mode = Plymouth.GetMode();
         if (mode == "updates" || mode == "system-upgrade" || mode == "firmware-upgrade") show("updates");
+        if (mode == "shutdown") show("shutdown");
     }
     if (global.current == "updates" || global.current == "repairing") {
         if (global.progress < 0) {

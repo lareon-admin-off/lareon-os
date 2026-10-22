@@ -68,7 +68,7 @@ KWIN
 fi
 # Desktop icon: Debian's "Install Debian" goes, ours stays.
 home=$(getent passwd "$user" | cut -d: -f6)
-if [ -n "$home" ] && [ -d "$home" ] && [ "$mode" != install ]; then
+if [ -n "$home" ] && [ -d "$home" ] && [ "$mode" != install ] && [ "$mode" != choose ]; then
     mkdir -p "$home/Desktop"
     for f in "$home"/Desktop/*; do
         [ -f "$f" ] || continue
@@ -83,7 +83,7 @@ if [ -n "$home" ] && [ -d "$home" ] && [ "$mode" != install ]; then
     chown -R "$user:" "$home/Desktop" 2>/dev/null || true
 fi
 case "$mode" in
-    install) session=lareon-installer.desktop ;;
+    install|choose) session=lareon-installer.desktop ;;
     *)       session=plasma.desktop ;;
 esac
 

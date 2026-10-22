@@ -26,6 +26,11 @@ case " $pre " in *" boot=live "*) ;; *) pre="boot=live $pre" ;; esac
 case " $pre " in *" components "*|*" components="*) ;; *) pre="$pre components" ;; esac
 case " $pre " in *" hostname="*) ;; *) pre="$pre hostname=lareon" ;; esac
 case " $pre " in *" username="*|*" live-config.username="*) ;; *) pre="$pre username=lareon" ;; esac
+# Keep the screen free of text: no kernel or service messages, no blinking cursor,
+# so the only things anyone sees are the Lareon boot screen and the Lareon screens.
+for extra in quiet splash loglevel=3 vt.global_cursor_default=0 systemd.show_status=0 rd.systemd.show_status=0 udev.log_level=3 rd.udev.log_level=3 plymouth.ignore-serial-consoles; do
+    case " $pre " in *" $extra "*) ;; *) pre="$pre $extra" ;; esac
+done
 pre=$(echo "$pre" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
 if [ -n "$post" ]; then tail_args=" -- $post"; else tail_args=""; fi
 options="$pre"
@@ -38,8 +43,12 @@ loadfont /$f"; done
 cat > "$cfg" <<GRUB
 # Lareon OS live USB boot menu (made by 0900-lareon-bootmenu.hook.binary)
 set default=0
-set timeout=8
-set timeout_style=menu
+# The menu stays out of sight: the computer goes straight to the Lareon boot screen
+# and then Lareon's own "Install or try" screen. Pressing Esc at start-up
+# still opens this menu, for troubleshooting.
+set timeout=0
+set timeout_style=hidden
+set gfxpayload=keep
 insmod all_video
 insmod gfxterm
 insmod png
@@ -73,6 +82,10 @@ if [ -n "\$lareon_inst" ]; then
         configfile /boot/grub/grub.cfg
     }
 fi
+menuentry "Lareon OS" --class lareon {
+	linux $kernel $options lareon.mode=choose$tail_args
+	initrd $initrd
+}
 menuentry "Install Lareon OS" --class lareon {
 	linux $kernel $options lareon.mode=install$tail_args
 	initrd $initrd

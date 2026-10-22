@@ -9,6 +9,7 @@ Item {
     property string text: ""
     property int pixelSize: 40
     property int weight: Font.DemiBold
+    property string family: Theme.font
     property int slices: 40
     property var stops: [[255, 124, 31], [217, 79, 196], [163, 92, 245]]
 
@@ -29,7 +30,7 @@ Item {
         id: measure
         visible: false
         text: gt.text
-        font.family: Theme.font
+        font.family: gt.family
         font.pixelSize: gt.pixelSize
         font.weight: gt.weight
     }
@@ -46,7 +47,7 @@ Item {
                 x: -parent.x
                 text: gt.text
                 color: gt.colorAt((parent.x + parent.width / 2) / Math.max(1, gt.width))
-                font.family: Theme.font
+                font.family: gt.family
                 font.pixelSize: gt.pixelSize
                 font.weight: gt.weight
             }

@@ -36,9 +36,9 @@ Item {
             spacing: 16
             Repeater {
                 model: [
-                    { glyph: "◎", title: qsTr("No telemetry"), text: qsTr("Lareon OS never sends usage data, crash reports or a device ID anywhere.") },
-                    { glyph: "✦", title: qsTr("No ads, no tracking"), text: qsTr("Nothing in the system watches what you do or tries to sell you something.") },
-                    { glyph: "♥", title: qsTr("Yours to keep"), text: qsTr("Your files stay on this computer. Nothing leaves unless you send it.") }
+                    { icon: "promise-telemetry", title: qsTr("No telemetry"), text: qsTr("Lareon OS never sends usage data, crash reports or a device ID anywhere.") },
+                    { icon: "promise-shield", title: qsTr("No ads, no tracking"), text: qsTr("Nothing in the system watches what you do or tries to sell you something.") },
+                    { icon: "promise-lock", title: qsTr("Yours to keep"), text: qsTr("Your files stay on this computer. Nothing leaves unless you send it.") }
                 ]
                 delegate: LCard {
                     required property int index
@@ -60,7 +60,7 @@ Item {
                                 GradientStop { position: 0.0; color: index === 0 ? "#ff7c1f" : (index === 1 ? "#d94fc4" : "#a35cf5") }
                                 GradientStop { position: 1.0; color: index === 0 ? "#d94fc4" : (index === 1 ? "#a35cf5" : "#ff7c1f") }
                             }
-                            Text { anchors.centerIn: parent; text: modelData.glyph; color: "white"; font.pixelSize: 28 }
+                            LIcon { anchors.centerIn: parent; size: 30; source: "file:///usr/share/lareon/ui/" + modelData.icon + ".svg" }
                         }
                         Text {
                             Layout.topMargin: 22

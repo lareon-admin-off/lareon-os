@@ -10,7 +10,14 @@ Item {
     property string hint: ""
     signal go()
 
-    readonly property var words: ["Hello", "مرحبا", "Bonjour", "Hola", "你好", "Merhaba", "سلام", "こんにちは", "Hallo", "Ciao", "Привет", "नमस्ते", "안녕하세요", "Olá", "Salam"]
+    // each script gets a font made for it, so no word falls back to a clunky default
+    readonly property var words: [
+        { t: "Hello", f: "Geist" }, { t: "مرحبا", f: "Noto Sans Arabic" }, { t: "Bonjour", f: "Geist" },
+        { t: "Hola", f: "Geist" }, { t: "你好", f: "Noto Sans CJK SC" }, { t: "Merhaba", f: "Geist" },
+        { t: "سلام", f: "Noto Sans Arabic" }, { t: "こんにちは", f: "Noto Sans CJK JP" }, { t: "Hallo", f: "Geist" },
+        { t: "Ciao", f: "Geist" }, { t: "Привет", f: "Geist" }, { t: "नमस्ते", f: "Noto Sans Devanagari" },
+        { t: "안녕하세요", f: "Noto Sans CJK KR" }, { t: "Olá", f: "Geist" }, { t: "Salam", f: "Geist" }
+    ]
     property int idx: 0
 
     Timer {
@@ -52,7 +59,8 @@ Item {
                 height: word.height
                 GradientText {
                     id: word
-                    text: root.words[root.idx]
+                    text: root.words[root.idx].t
+                    family: root.words[root.idx].f
                     pixelSize: 118
                 }
             }

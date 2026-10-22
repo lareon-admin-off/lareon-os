@@ -26,6 +26,7 @@ Window {
         id: loader
         anchors.fill: parent
         sourceComponent: Sys.mode === "install" ? installScreen
+                       : Sys.mode === "welcome" ? welcomeScreen
                        : Sys.mode === "install-failed" ? failedScreen
                        : Sys.mode === "crash" ? crashScreen
                        : Sys.mode === "home" ? homeScreen
@@ -54,6 +55,18 @@ Window {
         Item {
             readonly property real fit: Math.min(1, width / 1280, height / 800)
             InstallFlow {
+                width: parent.width / parent.fit
+                height: parent.height / parent.fit
+                scale: parent.fit
+                transformOrigin: Item.TopLeft
+            }
+        }
+    }
+    Component {
+        id: welcomeScreen
+        Item {
+            readonly property real fit: Math.min(1, width / 1280, height / 800)
+            WelcomeScreen {
                 width: parent.width / parent.fit
                 height: parent.height / parent.fit
                 scale: parent.fit

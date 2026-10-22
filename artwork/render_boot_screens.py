@@ -157,6 +157,8 @@ def plymouth(out):
                  "Help: lareon.org/help")
     message_screen(os.path.join(out, "repairing.png"), "Repairing your drive",
                    "This can take a few minutes. The computer restarts by itself.")
+    message_screen(os.path.join(out, "shutdown.png"), "See you soon",
+                   "Lareon OS is shutting down.")
     message_screen(os.path.join(out, "updates.png"), "Installing updates",
                    "Don’t turn off your computer. It restarts by itself when it’s done.")
     # one coral line for a wrong disk password

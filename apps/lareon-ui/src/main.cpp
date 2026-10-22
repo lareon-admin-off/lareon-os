@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
     const QStringList positional = parser.positionalArguments();
     const QString mode = positional.isEmpty() ? QStringLiteral("setup") : positional.first();
-    if (mode != QLatin1String("setup") && mode != QLatin1String("install") && mode != QLatin1String("install-failed") && mode != QLatin1String("crash") && mode != QLatin1String("home") && mode != QLatin1String("updates") && mode != QLatin1String("settings")) {
+    if (mode != QLatin1String("setup") && mode != QLatin1String("install") && mode != QLatin1String("welcome") && mode != QLatin1String("install-failed") && mode != QLatin1String("crash") && mode != QLatin1String("home") && mode != QLatin1String("updates") && mode != QLatin1String("settings")) {
         fprintf(stderr, "lareon-ui: unknown screen '%s'\n", qPrintable(mode));
         return 2;
     }
