@@ -256,6 +256,23 @@ def light_theme(user):
     user_config(user, ".config/ksplashrc", "[KSplash]\nEngine=KSplashQML\nTheme=org.lareon.desktop.light\n")
 
 
+def style_choices(user, d):
+    """Accent colour, how lively things move, the start-up sound."""
+    extra = ""
+    accent = str(d.get("accent", ""))
+    if re.fullmatch(r"#[0-9a-fA-F]{6}", accent) and accent.lower() != "#ff7c1f":
+        rgb = ",".join(str(int(accent[i:i + 2], 16)) for i in (1, 3, 5))
+        extra += "\n[General]\nAccentColor=%s\n" % rgb
+    factor = {"calm": "1.0", "lively": "0.7", "off": "0"}.get(str(d.get("motion", "lively")), "0.7")
+    extra += "\n[KDE]\nAnimationDurationFactor=%s\n" % factor
+    path = os.path.join(user.pw_dir, ".config/kdeglobals")
+    old = open(path).read() if os.path.exists(path) else ""
+    user_config(user, ".config/kdeglobals", old + extra)
+    if not d.get("startup_sound", True):
+        user_config(user, ".config/autostart/lareon-startup-sound.desktop",
+                    "[Desktop Entry]\nType=Application\nName=Startup sound\nHidden=true\n")
+
+
 def apply():
     if not os.path.exists(PENDING):
         fail("setup has already finished")
@@ -311,6 +328,7 @@ def apply():
     user_config(user, ".config/lareon/privacy.conf", f"crash_reports={crash}\n")
     if d.get("theme") == "light":
         light_theme(user)
+    style_choices(user, d)
 
     email = str(d.get("lareon_email", "")).strip()
     if email and len(email) < 200 and "\n" not in email:

@@ -11,7 +11,7 @@
 // Options for testing:
 //   --demo                 sample data; nothing on the computer is changed
 //   --windowed             normal window instead of full screen
-//   --page NAME            open the setup on a page (wifi, you, lareon, look, privacy, done)
+//   --page NAME            open the setup on a page (hello, wifi, you, lareon, look, style, privacy, tour, done)
 //   --screenshot FILE.png  draw the screen once, save it, and quit (implies --demo)
 
 #include <cstdio>

@@ -65,8 +65,14 @@ Item {
             font.pixelSize: 15
             font.weight: Font.Medium
         }
+        InstTips {
+            Layout.topMargin: 30
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: 560
+            Layout.preferredHeight: 74
+        }
         Text {
-            Layout.topMargin: 26
+            Layout.topMargin: 14
             Layout.alignment: Qt.AlignHCenter
             text: qsTr("This takes a few minutes. Keep your computer plugged in.")
             color: Theme.faint

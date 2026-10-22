@@ -1,23 +1,50 @@
 #!/bin/sh
-# Starts a Lareon Electron app (Lareon, Ember) so that:
-#  - its window gets the class the dock expects (--class), which is how the
-#    running app lines up with its pinned icon instead of getting a second one;
-#  - it uses the X11 backend, so that class is always what we set;
-#  - it still starts when the sandbox helper isn't set up for this user;
-#  - anything it prints is kept in ~/.cache/<name>.log, for lareon-doctor.
-# usage: electron-run PROGRAM CLASS [arguments...]
+# Starts a Lareon Electron app (Lareon, Ember) so it works on every machine:
+# in a virtual machine, without a graphics card, with or without the sandbox.
+# Usage: electron-run <program> <name> [arguments]
+# If the app closes within a few seconds it is tried again with safer settings;
+# if nothing works, a window says so and shows what to send.
 prog="$1"; cls="$2"; shift 2 || exit 2
-log="${XDG_CACHE_HOME:-$HOME/.cache}/$cls.log"
-mkdir -p "$(dirname "$log")" 2>/dev/null
-dir="$(dirname "$(readlink -f "$prog")")"
-sb="$dir/chrome-sandbox"
-flags="--ozone-platform=x11 --class=$cls"
-if [ -e "$sb" ] && [ -u "$sb" ] && [ "$(stat -c %u "$sb" 2>/dev/null)" = 0 ]; then
-    :                                           # a proper setuid sandbox helper: use it
-elif unshare -Ur true 2>/dev/null; then
-    flags="$flags --disable-setuid-sandbox"     # user namespaces: sandbox without the helper
-else
-    flags="$flags --no-sandbox"                 # last resort
+log="${XDG_CACHE_HOME:-$HOME/.cache}/$cls.log"; mkdir -p "$(dirname "$log")"
+dir="$(dirname "$(readlink -f "$prog")")"; sb="$dir/chrome-sandbox"
+
+base="--ozone-platform=x11 --class=$cls"
+sandbox=""
+if [ -e "$sb" ] && [ -u "$sb" ] && [ "$(stat -c %u "$sb")" = 0 ]; then :
+elif unshare -Ur true 2>/dev/null; then sandbox="--disable-setuid-sandbox"
+else sandbox="--no-sandbox"; fi
+
+gpu=""
+# a virtual machine has no real graphics card: draw with the CPU from the start
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --quiet 2>/dev/null; then
+    gpu="--disable-gpu"
 fi
-{ date; echo "start: $prog $flags $*"; } >> "$log" 2>/dev/null
-exec "$prog" $flags "$@" 2>>"$log"
+
+try() {  # try <label> <flags>: returns 0 when the app stayed open (or was closed by the person)
+    label="$1"; flags="$2"; shift 2
+    start=$(date +%s)
+    { echo "---- $(date) [$label]"; echo "start: $prog $flags $*"; } >> "$log"
+    # shellcheck disable=SC2086
+    "$prog" $flags "$@" >>"$log" 2>&1
+    code=$?
+    lived=$(( $(date +%s) - start ))
+    echo "exit code $code after ${lived}s" >> "$log"
+    [ "$lived" -ge 8 ] || [ "$code" = 0 ]
+}
+
+args_all="$base $sandbox"
+try "normal" "$args_all $gpu" "$@" && exit 0
+try "no graphics acceleration" "$args_all --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage" "$@" && exit 0
+try "no sandbox" "$base --no-sandbox --disable-gpu --disable-dev-shm-usage" "$@" && exit 0
+try "plain window system" "--ozone-platform=wayland --class=$cls --no-sandbox --disable-gpu" "$@" && exit 0
+
+name="$cls"
+msg="$name couldn't start. The details are saved in $log. Open a Terminal and run lareon-doctor, then send what it shows."
+if command -v kdialog >/dev/null 2>&1; then
+    kdialog --title "$name" --error "$msg
+
+$(tail -n 6 "$log" 2>/dev/null)" >/dev/null 2>&1 &
+elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -a "$name" "$name couldn't start" "$msg"
+fi
+exit 1

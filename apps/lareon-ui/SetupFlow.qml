@@ -3,15 +3,18 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Lareon
 
-// First-start setup: Wi-Fi → You → Lareon account → Look → Privacy → All set.
+// First-start setup: Hello → Wi-Fi → You → Lareon account → Look → Style → Privacy → Tour → All set.
 // Runs once, full screen, before any desktop exists. Everything that changes
 // the system goes through /usr/lib/lareon/setup-helper (run with sudo; the
 // setup account is only allowed to run that one program).
 Item {
     id: flow
 
-    readonly property var stepNames: [qsTr("Wi-Fi"), qsTr("You"), qsTr("Lareon account"), qsTr("Look"), qsTr("Privacy")]
-    readonly property var pageKeys: ["wifi", "you", "lareon", "look", "privacy", "done"]
+    readonly property var stepNames: [qsTr("Wi-Fi"), qsTr("You"), qsTr("Lareon account"), qsTr("Look"), qsTr("Style"), qsTr("Privacy")]
+    readonly property var pageKeys: ["hello", "wifi", "you", "lareon", "look", "style", "privacy", "tour", "done"]
+    readonly property int pgPrivacy: 6
+    readonly property int pgTour: 7
+    readonly property int pgDone: 8
     property int page: Math.max(0, pageKeys.indexOf(Sys.startPage))
 
     // ---- what the person chooses
@@ -28,6 +31,9 @@ Item {
     property bool followSun: false
     property string crashReports: "ask"
     property bool autoUpdates: true
+    property string accent: "#ff7c1f"
+    property string motion: "lively"
+    property bool startupSound: true
     property string connectedTo: Sys.demo ? "Larsonia-Home" : ""
 
     // ---- running state
@@ -65,7 +71,7 @@ Item {
 
     function next() {
         error = ""
-        if (page === 4) {
+        if (page === pgPrivacy) {
             apply()
         } else if (page < pageKeys.length - 1) {
             page++
@@ -73,7 +79,7 @@ Item {
     }
     function back() {
         error = ""
-        if (page > 0 && page < 5) page--
+        if (page > 0 && page < pgTour) page--
     }
 
     // Create the account and save every choice.
@@ -93,11 +99,14 @@ Item {
             time_of_day: timeOfDay,
             follow_sun: followSun,
             crash_reports: crashReports,
-            auto_updates: autoUpdates
+            auto_updates: autoUpdates,
+            accent: accent,
+            motion: motion,
+            startup_sound: startupSound
         }, function(code, out, err) {
             busy = false
             if (code === 0) {
-                page = 5
+                page = pgTour
             } else {
                 error = err.trim() !== "" ? err.trim() : qsTr("Something went wrong saving your account (error %1).").arg(code)
             }
@@ -142,8 +151,8 @@ Item {
         anchors.right: parent.right
         anchors.top: parent.top
         title: qsTr("Set up Lareon OS")
-        steps: flow.page < 5 ? flow.stepNames : []
-        current: flow.page
+        steps: flow.page > 0 && flow.page < flow.pgTour ? flow.stepNames : []
+        current: flow.page - 1
     }
 
     StackLayout {
@@ -156,11 +165,14 @@ Item {
         width: 820
         currentIndex: flow.page
 
+        HelloPage { onGo: flow.next() }
         PageWifi { setup: flow }
         PageYou { id: youPage; setup: flow }
         PageLareon { setup: flow }
         PageLook { setup: flow }
+        PageStyle { setup: flow }
         PagePrivacy { setup: flow }
+        PageTour { setup: flow }
         PageDone { setup: flow }
     }
 
@@ -190,7 +202,7 @@ Item {
     // ---- Back / Skip / Continue
     RowLayout {
         id: foot
-        visible: flow.page < 5
+        visible: flow.page > 0 && flow.page < flow.pgDone
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 64
@@ -200,20 +212,20 @@ Item {
         LButton {
             kind: "ghost"
             text: "‹  " + qsTr("Back")
-            visible: flow.page > 0
+            visible: flow.page > 0 && flow.page < flow.pgTour
             onClicked: flow.back()
         }
         Item { Layout.fillWidth: true }
         LButton {
             kind: "ghost"
             text: qsTr("Skip for now")
-            visible: flow.page === 0 && flow.connectedTo === ""
+            visible: flow.page === 1 && flow.connectedTo === ""
             onClicked: flow.next()
         }
         LButton {
-            kind: flow.page === 2 && flow.lareonEmail.trim() === "" ? "normal" : "primary"
-            text: flow.page === 2 && flow.lareonEmail.trim() === "" ? qsTr("Skip") : qsTr("Continue") + "  ›"
-            enabled: !flow.busy && (flow.page !== 1 || youPage.valid)
+            kind: flow.page === 3 && flow.lareonEmail.trim() === "" ? "normal" : "primary"
+            text: flow.page === 3 && flow.lareonEmail.trim() === "" ? qsTr("Skip") : (flow.page === flow.pgTour ? qsTr("Finish") : qsTr("Continue")) + "  ›"
+            enabled: !flow.busy && (flow.page !== 2 || youPage.valid)
             onClicked: flow.next()
         }
     }

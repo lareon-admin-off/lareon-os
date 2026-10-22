@@ -53,6 +53,13 @@ qt_add_qml_module(lareon-ui
         HomeScreen.qml
         UpdatesScreen.qml
         SettingsScreen.qml
+        HelloPage.qml
+        MiniDesktop.qml
+        PageStyle.qml
+        PageTour.qml
+        InstTips.qml
+        InstCheck.qml
+        InstReview.qml
         SCard.qml
         SRow.qml
         SSlider.qml

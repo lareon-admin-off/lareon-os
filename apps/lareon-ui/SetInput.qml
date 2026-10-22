@@ -67,8 +67,11 @@ ColumnLayout {
         saveLayouts(layoutList.filter(x => x !== code))
     }
     function setLibinput(key, val) {
-        host.sh(host.kw("kcminputrc", ["Libinput", "Touchpad"], key, val ? "true" : "false") + "; busctl --user call org.kde.KWin /org/kde/KWin/InputDevice org.kde.KWin.InputDeviceManager listDevices >/dev/null 2>&1; "
-                + "qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || " + host.reconfigureKWin())
+        // remember it for next sign-in, and apply it to the touchpads right now
+        const prop = key === "TapToClick" ? "tapToClick" : "naturalScroll"
+        host.sh(host.kw("kcminputrc", ["Libinput", "Touchpad"], key, val ? "true" : "false")
+                + "; for d in $(busctl --user tree org.kde.KWin --list 2>/dev/null | grep '/org/kde/KWin/InputDevice/event'); do "
+                + "busctl --user set-property org.kde.KWin $d org.kde.KWin.InputDevice " + prop + " b " + (val ? "true" : "false") + " >/dev/null 2>&1; done; true")
     }
 
     SCard {
