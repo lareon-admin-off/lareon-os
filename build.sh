@@ -298,23 +298,32 @@ if ! $have_ember; then
     auth=()
     [ -n "${LAREON_RELEASES_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $LAREON_RELEASES_TOKEN")
     json="$(curl -fsSL "${auth[@]}" "https://api.github.com/repos/lareon-admin-off/ember/releases/latest" 2>/dev/null || true)"
-    url="$(printf '%s' "$json" | python3 -c '
+    urls="$(printf '%s' "$json" | python3 -c '
 import json, sys
 try:
     assets = json.load(sys.stdin).get("assets", [])
 except Exception:
     assets = []
-for a in assets:
-    n = a["name"].lower()
-    if n.endswith(".appimage") and "arm" not in n and "aarch" not in n:
-        print(a["browser_download_url"]); break
+# every AppImage, ones that say x64/x86_64/amd64 first
+names = [a for a in assets if a["name"].lower().endswith(".appimage")]
+names.sort(key=lambda a: 0 if any(t in a["name"].lower() for t in ("x64", "x86", "amd64")) else 1)
+for a in names:
+    print(a["browser_download_url"])
 ' || true)"
-    if [ -n "$url" ]; then
+    # The image is for x86-64 computers. Take the first AppImage whose program really is x86-64
+    # (an Apple Silicon build says nothing in its name but only runs on ARM: "No such file or directory").
+    for url in $urls; do
         tmp="$(mktemp -d)"
         if curl -fsSL "${auth[@]}" -H "Accept: application/octet-stream" -o "$tmp/Ember.AppImage" "$url" \
            && chmod +x "$tmp/Ember.AppImage" \
            && ( cd "$tmp" && ./Ember.AppImage --appimage-extract >/dev/null 2>&1 ) \
            && [ -x "$tmp/squashfs-root/AppRun" ]; then
+            ebin="$tmp/squashfs-root/ember"; [ -f "$ebin" ] || ebin="$(find "$tmp/squashfs-root" -maxdepth 1 -type f -perm -u+x ! -name AppRun | head -n1)"
+            mach="$(od -An -tx1 -j18 -N2 "$ebin" 2>/dev/null | tr -d ' \n')"
+            if [ "$mach" != "3e00" ]; then
+                warn "Ember AppImage $(basename "$url") is not for x86-64 computers (machine code '$mach'); skipping it"
+                rm -rf "$tmp"; continue
+            fi
             CA="$LIVE/config/includes.chroot_after_packages"
             mkdir -p "$CA/opt" "$CA/usr/bin" "$CA/usr/share/applications"
             rm -rf "$CA/opt/ember"; mv "$tmp/squashfs-root" "$CA/opt/ember"
@@ -339,13 +348,14 @@ StartupNotify=true
 EOT
             have_ember=true
             echo "Ember: unpacked from $url"
+            rm -rf "$tmp"
+            break
         else
-            warn "could not unpack the Ember AppImage"
+            warn "could not unpack the Ember AppImage $(basename "$url")"
         fi
         rm -rf "$tmp"
-    else
-        warn "Ember has no AppImage in its latest release"
-    fi
+    done
+    $have_ember || warn "Ember has no AppImage for x86-64 computers in its latest release"
 fi
 
 # An app package must not ship a file one of our packages already owns (for

@@ -28,9 +28,9 @@ Item {
         property int tries: 0
         onTriggered: {
             tries += 1
-            if (tries === 1) Sys.startDetached("sudo", ["-n", "systemctl", "reboot", "--force"])
-            else if (tries === 2) Sys.startDetached("sudo", ["-n", "/sbin/reboot", "-f"])
-            else if (tries === 3) Sys.startDetached("sudo", ["-n", "sh", "-c", "echo 1 > /proc/sys/kernel/sysrq; echo b > /proc/sysrq-trigger"])
+            // straight to the reset: no waiting for services to stop
+            if (tries === 1) Sys.startDetached("sudo", ["-n", "sh", "-c", "sync; echo 1 > /proc/sys/kernel/sysrq; echo b > /proc/sysrq-trigger"])
+            else if (tries === 2) Sys.startDetached("sudo", ["-n", "/sbin/reboot", "-f", "-f"])
             else stop()
         }
     }
@@ -105,46 +105,8 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             kind: "ghost"
             text: qsTr("Shut down instead")
-            onClicked: Sys.startDetached("sudo", ["-n", "systemctl", "poweroff", "--force"])
+            onClicked: Sys.startDetached("sudo", ["-n", "sh", "-c", "sync; echo 1 > /proc/sys/kernel/sysrq; echo o > /proc/sysrq-trigger"])
         }
     }
 
-    // a little celebration, once
-    Item {
-        id: confetti
-        anchors.fill: parent
-        visible: root.visible
-        clip: true
-        z: 5
-        Repeater {
-            model: 44
-            delegate: Rectangle {
-                id: piece
-                required property int index
-                readonly property real startX: Math.random() * confetti.width
-                readonly property real drift: (Math.random() - 0.5) * 160
-                width: 6 + Math.random() * 6
-                height: width * 1.6
-                radius: 2
-                x: startX
-                y: -30
-                opacity: 0
-                color: index % 4 === 0 ? "#ff7c1f" : (index % 4 === 1 ? "#d94fc4" : (index % 4 === 2 ? "#a35cf5" : "#ece9f5"))
-                SequentialAnimation {
-                    running: confetti.visible && root.StackLayout.isCurrentItem
-                    PauseAnimation { duration: Math.random() * 900 }
-                    ParallelAnimation {
-                        NumberAnimation { target: piece; property: "y"; from: -30; to: confetti.height + 30; duration: 2600 + Math.random() * 1800; easing.type: Easing.InQuad }
-                        NumberAnimation { target: piece; property: "x"; from: piece.startX; to: piece.startX + piece.drift; duration: 3600; easing.type: Easing.InOutSine }
-                        NumberAnimation { target: piece; property: "rotation"; from: 0; to: 360 * (index % 2 === 0 ? 2 : -2); duration: 3600 }
-                        SequentialAnimation {
-                            NumberAnimation { target: piece; property: "opacity"; to: 1; duration: 200 }
-                            PauseAnimation { duration: 2600 }
-                            NumberAnimation { target: piece; property: "opacity"; to: 0; duration: 800 }
-                        }
-                    }
-                }
-            }
-        }
-    }
 }

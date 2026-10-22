@@ -9,3 +9,4 @@ Terminal=false
 Categories=Settings;System;
 Keywords=settings;preferences;appearance;wifi;sound;display;
 StartupNotify=true
+StartupWMClass=lareon-settings

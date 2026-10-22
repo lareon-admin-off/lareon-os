@@ -41,7 +41,6 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName(QStringLiteral("lareon-ui"));
     QGuiApplication::setOrganizationName(QStringLiteral("Lareon"));
-    QGuiApplication::setDesktopFileName(QStringLiteral("lareon-ui"));
 
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("Lareon OS screens"));
@@ -69,6 +68,13 @@ int main(int argc, char *argv[])
             args.insert(kv.left(eq), kv.mid(eq + 1));
         }
     }
+
+    // each screen is its own app on the taskbar, with its own name and icon
+    QString desktopName = QStringLiteral("lareon-ui");
+    if (mode == QLatin1String("settings")) desktopName = QStringLiteral("lareon-settings");
+    else if (mode == QLatin1String("home")) desktopName = QStringLiteral("lareon-home");
+    else if (mode == QLatin1String("updates")) desktopName = QStringLiteral("lareon-updates");
+    QGuiApplication::setDesktopFileName(desktopName);
 
     const bool screenshot = parser.isSet(shotOpt);
 

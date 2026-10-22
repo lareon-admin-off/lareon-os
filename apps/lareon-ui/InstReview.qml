@@ -29,7 +29,7 @@ Item {
         LCard {
             Layout.topMargin: 28
             Layout.fillWidth: true
-            Layout.preferredHeight: 190
+            Layout.preferredHeight: 250
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 22
@@ -38,6 +38,8 @@ Item {
                     model: [
                         { k: qsTr("Language"), v: root.install.languageName() },
                         { k: qsTr("Keyboard"), v: root.install.keyboard.toUpperCase() },
+                        { k: qsTr("Place"), v: root.install.timeZone },
+                        { k: qsTr("Look"), v: (root.install.theme === "light" ? qsTr("Lareon Light") : qsTr("Lareon Dark")) },
                         { k: qsTr("Install on"), v: root.install.diskName !== "" ? root.install.diskName : root.install.disk }
                     ]
                     delegate: RowLayout {

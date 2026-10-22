@@ -58,6 +58,10 @@ qt_add_qml_module(lareon-ui
         PageStyle.qml
         PageTour.qml
         InstTips.qml
+        GradientText.qml
+        InstPromise.qml
+        InstZone.qml
+        InstLook.qml
         InstCheck.qml
         InstReview.qml
         SCard.qml

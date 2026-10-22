@@ -124,6 +124,11 @@ Item {
     }
 
     Component.onCompleted: {
+        const look = Sys.readFile("/var/lib/lareon/look")
+        const lt = look.match(/^theme=(dark|light)$/m)
+        const la = look.match(/^accent=(#[0-9a-fA-F]{6})$/m)
+        if (lt) theme = lt[1]
+        if (la) accent = la[1]
         const saved = Sys.readFile("/var/lib/lareon/language").trim()
         if (saved !== "") language = saved
         const tz = Sys.readFile("/etc/timezone").trim()

@@ -9,3 +9,4 @@ Terminal=false
 Categories=System;
 StartupNotify=false
 X-KDE-GlobalAccel-CommandShortcut=false
+StartupWMClass=lareon-home

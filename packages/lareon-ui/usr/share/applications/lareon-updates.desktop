@@ -7,3 +7,4 @@ Exec=lareon-ui updates
 Terminal=false
 Categories=System;Settings;
 Keywords=update;upgrade;software;
+StartupWMClass=lareon-updates

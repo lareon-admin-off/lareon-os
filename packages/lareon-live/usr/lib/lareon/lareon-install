@@ -167,6 +167,13 @@ def install(cfg):
     disk = cfg.get("disk", "")
     lang = cfg.get("language", "en")
     kb = re.sub(r"[^A-Za-z0-9_,-]", "", cfg.get("keyboard", "us")) or "us"
+    zone = str(cfg.get("time_zone", ""))
+    if not re.fullmatch(r"[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+){0,2}", zone) or not os.path.isfile("/usr/share/zoneinfo/" + zone):
+        zone = ""
+    theme = "light" if cfg.get("theme") == "light" else "dark"
+    accent = str(cfg.get("accent", ""))
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", accent):
+        accent = "#ff7c1f"
     if not re.match(r"^/dev/[A-Za-z0-9/_-]+$", disk) or not os.path.exists(disk):
         raise Failed("That drive isn't there any more.")
     if disk == live_disk():
@@ -247,6 +254,18 @@ def install(cfg):
     os.makedirs(TARGET + "/var/lib/lareon", exist_ok=True)
     with open(TARGET + "/var/lib/lareon/language", "w") as f:
         f.write(lang + "\n")
+    # what was chosen in the installer; first-start setup starts from these
+    with open(TARGET + "/var/lib/lareon/look", "w") as f:
+        f.write("theme=%s\naccent=%s\n" % (theme, accent))
+    if zone:
+        try:
+            with open(TARGET + "/etc/timezone", "w") as f:
+                f.write(zone + "\n")
+            if os.path.lexists(TARGET + "/etc/localtime"):
+                os.remove(TARGET + "/etc/localtime")
+            os.symlink("/usr/share/zoneinfo/" + zone, TARGET + "/etc/localtime")
+        except OSError as e:
+            log("could not set the time zone: %s" % e)
 
     # 5. the new system's own view of the machine
     progress(85, "Setting up Lareon OS", "Preparing the new system")
@@ -344,26 +363,30 @@ def install(cfg):
 
 
 def restart_now():
-    """Restart without waiting for the live system to shut down cleanly.
-
-    The target drive is already synced and unmounted, and the live system has
-    nothing to save. A normal shutdown can hang on a blank screen in virtual
-    machines, so go straight to the reset and try harder ways if it doesn't
-    happen at once."""
+    """Restart at once. The new drive is already synced and unmounted and the live
+    system has nothing to save, so don't ask it to shut down (that can sit on a
+    "waiting for a stop job" screen, especially in virtual machines): ask the
+    kernel to reset straight away, and try other ways if that doesn't happen."""
     try:
         os.sync()
     except OSError:
         pass
-    run("systemctl", "--force", "--force", "reboot", check=False)
-    time.sleep(3)
-    for attempt in (
-        lambda: run("reboot", "-f", check=False),
-        lambda: open("/proc/sysrq-trigger", "w").write("b"),
-    ):
+    log("restart: asking the kernel to reset")
+    try:
+        with open("/proc/sys/kernel/sysrq", "w") as f:
+            f.write("1")
+    except OSError:
+        pass
+    attempts = (
+        lambda: open("/proc/sysrq-trigger", "w").write("b"),          # reset now
+        lambda: run("reboot", "-f", "-f", check=False),                # the same through reboot(2)
+        lambda: run("systemctl", "--force", "--force", "reboot", check=False),
+    )
+    for attempt in attempts:
         try:
             attempt()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            log("restart attempt failed: %s" % e)
         time.sleep(2)
     try:  # last resort: the PC reset port that virtual machines and most PCs have
         fd = os.open("/dev/port", os.O_WRONLY)

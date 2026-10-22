@@ -38,7 +38,7 @@ jobs:
           QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui install-failed --screenshot shots/install-failed.png
           # The Lareon installer screens: any QML error stops the build, because
           # a broken installer would only show up when someone tries to install.
-          for p in hello check language keyboard drive review install done failed; do
+          for p in hello promise check language keyboard place look drive review install done failed; do
             QT_QPA_PLATFORM=offscreen /usr/bin/lareon-ui install --page $p --screenshot shots/install-$p.png 2> shots/err-$p.txt || { cat shots/err-$p.txt; exit 1; }
             cat shots/err-$p.txt
             if grep -E "ReferenceError|TypeError|is not a type|Cannot assign|Unable to assign|unavailable|SyntaxError|is not installed" shots/err-$p.txt; then

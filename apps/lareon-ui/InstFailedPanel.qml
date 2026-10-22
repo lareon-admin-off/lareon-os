@@ -60,7 +60,7 @@ Item {
                 kind: "primary"
                 size: 46
                 text: qsTr("Try again")
-                onClicked: { root.install.error = ""; root.install.page = 4 }
+                onClicked: { root.install.error = ""; root.install.page = root.install.pgDrive }
             }
         }
         Item { Layout.fillHeight: true }
